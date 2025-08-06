@@ -1,0 +1,17 @@
+{
+    "transformer": "meta-llama/Llama-2-7b-hf",
+    "time2vec_dim": 64,
+    "num_nodes": 100,
+    "node_dim": 128,
+    "gnn_output_dim": 64,
+    "fused_dim": 256,
+    "num_classes": 10,
+    "learning_rate": 1e-5,
+    "batch_size": 16,
+    "epochs": 10,
+    "use_time2vec": true,
+    "use_gnn": true,
+    "use_causal_reg": false,
+    "lambda_causal": 0.1,
+    "time_delta": 86400
+}
