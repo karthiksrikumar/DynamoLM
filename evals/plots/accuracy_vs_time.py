@@ -4,7 +4,7 @@ import numpy as np
 
 def plot_accuracy_vs_time(results_path: str, output_path: str):
     """
-    Plot accuracy vs. time for DYNAMO, RAG, and Full FT.
+    Plot accuracy vs. time for DYNAMO, RAG, and Full FT for 7b.
 
     Args:
         results_path (str): Path to evaluation results JSON.
