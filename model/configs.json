@@ -1,4 +1,5 @@
 {
+    "transformer": "meta-llama/Llama-2-7b-hf",
     "time2vec_dim": 64,
     "num_nodes": 100,
     "node_dim": 128,
@@ -11,5 +12,6 @@
     "use_time2vec": true,
     "use_gnn": true,
     "use_causal_reg": true,
-    "lambda_causal": 0.1
+    "lambda_causal": 0.1,
+    "time_delta": 86400
 }
