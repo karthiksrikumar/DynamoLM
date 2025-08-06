@@ -1,13 +1,26 @@
 {
-    "transformer": "meta-llama/Llama-2-7b-hf",
+    "model_sizes": ["llama-7b", "llama-13b", "llama-30b"],
+    "transformer": {
+        "llama-7b": "meta-llama/Llama-2-7b-hf",
+        "llama-13b": "meta-llama/Llama-2-13b-hf",
+        "llama-30b": "meta-llama/Llama-2-30b-hf"
+    },
+    "batch_size": {
+        "llama-7b": 16,
+        "llama-13b": 8,
+        "llama-30b": 4
+    },
+    "learning_rate": {
+        "llama-7b": 1e-5,
+        "llama-13b": 5e-6,
+        "llama-30b": 2e-6
+    },
     "time2vec_dim": 64,
     "num_nodes": 100,
     "node_dim": 128,
     "gnn_output_dim": 64,
     "fused_dim": 256,
     "num_classes": 10,
-    "learning_rate": 1e-5,
-    "batch_size": 16,
     "epochs": 10,
     "use_time2vec": true,
     "use_gnn": true,
