@@ -1,4 +1,4 @@
-# TEMPiRL: 
+# TEMPiRL: A Parameter-Efficient LLM Framework for Mitigating Causal Fragility and Temporal Bias with High Accuracy and Low Compute
 
 This guide details how to run and test TEMPiRL for temporal-causal adaptation on the foundational LLaMA 2-7B model.
 
