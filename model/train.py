@@ -143,4 +143,4 @@ if __name__ == "__main__":
     parser.add_argument('--variant', type=str, default='full',
                         choices=['full', 'no_time2vec', 'no_gnn', 'no_causal_reg'],
                         help="Model variant to train")
-    parser.add_argument('--data_path', type
+    parser.add_argument('--data_path', type)

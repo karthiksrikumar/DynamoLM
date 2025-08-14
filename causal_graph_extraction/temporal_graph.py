@@ -4,7 +4,7 @@ import networkx as nx
 class TemporalGraph:
     def __init__(self):
         self.graph = nx.DiGraph()
-        self.edge_times = defaultdict(list)  # Edge -> [(start, end), ...]
+        self.edge_times = defaultdict(list)
         self.edge_strengths = defaultdict(float)
 
     def add_causal_relationship(self, cause, effect, start_time, end_time=None, strength=1.0):
