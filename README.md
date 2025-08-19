@@ -11,7 +11,7 @@ This guide details how to run and test TEMPiRL for temporal-causal adaptation on
 ## Step 1: Clone and Install (1 min)
 
 ```bash
-git clone https://github.com/NaydoGon/TEMPiRL.git
+git clone https://github.com/karthiksrikumar/TEMPiRL.git
 cd TEMPiRL
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
@@ -31,7 +31,7 @@ Train on Test 2 dataset:
 python model/train.py --variant full --data_path data/dynamodata.json --device cuda
 ```
 
-- Trains LLaMA-2-7B + DYNAMO for 10 epochs (~4.9 GPU hr on A100).
+- Trains LLaMA-2-7B + DYNAMO for 10 epochs (~4.9 GPU hr on A100). Testing is fairly small dataset, being built larger for main track.
 - Saves weights to `weights/dynamo.pt`.
 
 ## Step 4: Evaluate (2 min)
