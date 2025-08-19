@@ -22,7 +22,7 @@ def parse_causal_trace(trace_str: str, node_list: List[str]) -> torch.Tensor:
     edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
     return edge_index
 
-def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "llama-2-7b"):
+def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "meta-llama/Llama-2-7b-hf"):
     with open(input_file, 'r') as f:
         raw_data = json.load(f)
     
@@ -46,24 +46,23 @@ def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "lla
         question = item["question"]
         answer = item["answer"]
         
-        encoded_qa = tokenizer(
-            question, 
-            answer, 
-            padding="max_length", 
-            truncation=True, 
-            max_length=256, 
+        text = f"<s> Question: {question} Answer: {answer} </s>"
+        
+        encoded = tokenizer(
+            text,
+            padding="max_length",
+            truncation=True,
+            max_length=512,
             return_tensors="pt"
         )
         
-        input_ids = encoded_qa["input_ids"][0]
+        input_ids = encoded["input_ids"][0]
         
-        sep_token_id = tokenizer.sep_token_id
-        sep_positions = torch.where(input_ids == sep_token_id)[0]
+        answer_token = tokenizer.encode("Answer:", add_special_tokens=False)[0]
+        answer_positions = torch.where(input_ids == answer_token)[0]
         
-        if len(sep_positions) >= 2:
-            answer_start_idx = sep_positions[0] + 1
-            answer_end_idx = sep_positions[1]
-            
+        if len(answer_positions) > 0:
+            answer_start_idx = answer_positions[0] + 1
             labels = input_ids.clone()
             labels[:answer_start_idx] = -100
         else:
@@ -76,8 +75,8 @@ def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "lla
         edge_index = parse_causal_trace(item["causal_trace"], global_node_list)
         
         data_point = {
-            "input_ids": encoded_qa["input_ids"].flatten(),
-            "attention_mask": encoded_qa["attention_mask"].flatten(),
+            "input_ids": input_ids,
+            "attention_mask": encoded["attention_mask"][0],
             "labels": labels,
             "time": torch.tensor([time], dtype=torch.float),
             "edge_index": edge_index,
