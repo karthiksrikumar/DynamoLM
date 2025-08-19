@@ -8,13 +8,80 @@ import warnings
 
 
 class Time2Vec(nn.Module):
-    # Keep this class unchanged
-    # ... (your existing Time2Vec implementation)
+    
+    def __init__(self, dim: int, activation: str = "sin"):
+        super().__init__()
+        if dim <= 0:
+            raise ValueError(f"Dimension must be positive, got {dim}")
+            
+        self.dim = dim
+        self.activation = activation
+        
+        self.linear_weight = nn.Parameter(torch.randn(1))
+        self.linear_bias = nn.Parameter(torch.randn(1))
+        
+        if dim > 1:
+            self.periodic_weights = nn.Parameter(torch.randn(dim - 1))
+            self.periodic_biases = nn.Parameter(torch.randn(dim - 1))
+        else:
+            self.register_parameter('periodic_weights', None)
+            self.register_parameter('periodic_biases', None)
+            
+        self.reset_parameters()
+    
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.linear_weight.unsqueeze(0))
+        nn.init.zeros_(self.linear_bias)
+        
+        if self.periodic_weights is not None:
+            nn.init.xavier_uniform_(self.periodic_weights.unsqueeze(0))
+            nn.init.uniform_(self.periodic_biases, -torch.pi, torch.pi)
+
+    def forward(self, t: torch.Tensor) -> torch.Tensor:
+        if t.numel() == 0:
+            return torch.empty(*t.shape, self.dim, device=t.device, dtype=t.dtype)
+            
+        original_shape = t.shape
+        t_flat = t.flatten().unsqueeze(-1)
+        
+        linear_component = self.linear_weight * t_flat + self.linear_bias
+        
+        if self.dim == 1:
+            result = linear_component
+        else:
+            periodic_input = self.periodic_weights * t_flat + self.periodic_biases
+            
+            if self.activation == "sin":
+                periodic_component = torch.sin(periodic_input)
+            elif self.activation == "cos":
+                periodic_component = torch.cos(periodic_input)
+            else:
+                raise ValueError(f"Unsupported activation: {self.activation}")
+            
+            result = torch.cat([linear_component, periodic_component], dim=-1)
+        
+        return result.view(*original_shape, self.dim)
 
 
 class GraphPooling(nn.Module):
-    # Keep this class unchanged
-    # ... (your existing GraphPooling implementation)
+    
+    def __init__(self, pooling_type: str = "mean"):
+        super().__init__()
+        self.pooling_type = pooling_type
+        
+        if pooling_type not in ["mean", "max", "sum", "attention"]:
+            raise ValueError(f"Unsupported pooling type: {pooling_type}")
+    
+    def forward(self, node_embeddings: torch.Tensor, batch_indices: Optional[torch.Tensor] = None) -> torch.Tensor:
+        if self.pooling_type == "mean":
+            return node_embeddings.mean(dim=0, keepdim=True)
+        elif self.pooling_type == "max":
+            return node_embeddings.max(dim=0, keepdim=True)[0]
+        elif self.pooling_type == "sum":
+            return node_embeddings.sum(dim=0, keepdim=True)
+        elif self.pooling_type == "attention":
+            attention_weights = torch.softmax(node_embeddings.sum(dim=-1), dim=0)
+            return (attention_weights.unsqueeze(-1) * node_embeddings).sum(dim=0, keepdim=True)
 
 
 class DynamoModel(nn.Module):
