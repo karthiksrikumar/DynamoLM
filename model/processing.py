@@ -1,6 +1,7 @@
+# processing.py
 import json
 import torch
-from transformers import AutoTokenizer
+from tokenizer_utils import DynamoTokenizer
 import re
 from typing import List
 
@@ -26,9 +27,7 @@ def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "met
     with open(input_file, 'r') as f:
         raw_data = json.load(f)
     
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer = DynamoTokenizer(model_name)
     
     all_nodes = set()
     pattern = r'\[([^\]]+)\]'
@@ -46,27 +45,8 @@ def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "met
         question = item["question"]
         answer = item["answer"]
         
-        text = f"<s> Question: {question} Answer: {answer} </s>"
-        
-        encoded = tokenizer(
-            text,
-            padding="max_length",
-            truncation=True,
-            max_length=512,
-            return_tensors="pt"
-        )
-        
-        input_ids = encoded["input_ids"][0]
-        
-        answer_token = tokenizer.encode("Answer:", add_special_tokens=False)[0]
-        answer_positions = torch.where(input_ids == answer_token)[0]
-        
-        if len(answer_positions) > 0:
-            answer_start_idx = answer_positions[0] + 1
-            labels = input_ids.clone()
-            labels[:answer_start_idx] = -100
-        else:
-            labels = input_ids.clone()
+        # Use the tokenizer utility
+        tokenized = tokenizer.tokenize_qa_pair(question, answer)
         
         date_str = item["date"]
         year, month, day = map(int, date_str.split('-'))
@@ -75,9 +55,9 @@ def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "met
         edge_index = parse_causal_trace(item["causal_trace"], global_node_list)
         
         data_point = {
-            "input_ids": input_ids,
-            "attention_mask": encoded["attention_mask"][0],
-            "labels": labels,
+            "input_ids": tokenized["input_ids"],
+            "attention_mask": tokenized["attention_mask"],
+            "labels": tokenized["labels"],
             "time": torch.tensor([time], dtype=torch.float),
             "edge_index": edge_index,
             "original_question": question,
