@@ -4,143 +4,240 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import argparse
-from model import DynamoModel
+from model import DynamoModel, create_dynamo_model
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
+from transformers import get_linear_schedule_with_warmup
+from tqdm import tqdm
 
-class DynamoDataset(Dataset):
-    """Custom dataset for DYNAMO, loading text, time, and graph data from JSON."""
+class DynamoQADataset(Dataset):
+    """Custom dataset for DYNAMO QA, loading from preprocessed .pt file."""
     def __init__(self, data_path: str):
         """
         Args:
-            data_path (str): Path to JSON file containing training data.
+            data_path (str): Path to .pt file containing preprocessed training data.
         """
         if not os.path.exists(data_path):
             raise FileNotFoundError(f"Data file {data_path} not found.")
         
-        with open(data_path, 'r') as f:
-            raw_data = json.load(f)
-        
-        self.data = []
-        for item in raw_data:
-            required_fields = ['input_ids', 'attention_mask', 'time', 'label', 'edge_indices']
-            if not all(field in item for field in required_fields):
-                raise ValueError(f"Missing required fields in data item: {item}")
-            
-            input_ids = torch.tensor(item['input_ids'], dtype=torch.long)
-            attention_mask = torch.tensor(item['attention_mask'], dtype=torch.long)
-            time = torch.tensor(item['time'], dtype=torch.float)
-            label = torch.tensor(item['label'], dtype=torch.long)
-            edge_indices = torch.tensor(item['edge_indices'], dtype=torch.long)
-            
-            self.data.append((input_ids, attention_mask, time, label, edge_indices))
+        # Load the preprocessed data
+        data_dict = torch.load(data_path)
+        self.processed_data = data_dict["processed_data"]
+        self.node_list = data_dict["node_list"]
 
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self.processed_data)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, ...]:
-        return self.data[idx]
+    def __getitem__(self, idx: int) -> Dict[str, Any]:
+        return self.processed_data[idx]
+    
+    def collate_fn(self, batch):
+        """
+        Custom collate function to handle variable-length edge indices.
+        """
+        # Stack tensors that have consistent shapes
+        input_ids = torch.stack([item['input_ids'] for item in batch])
+        attention_mask = torch.stack([item['attention_mask'] for item in batch])
+        labels = torch.stack([item['labels'] for item in batch])
+        time = torch.stack([item['time'] for item in batch])
+        
+        # Edge indices need special handling as they may have different shapes
+        edge_indices = [item['edge_index'] for item in batch]
+        
+        return {
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
+            'labels': labels,
+            'time': time,
+            'edge_indices': edge_indices
+        }
 
-def compute_causal_loss(model: nn.Module, batch: Tuple, config: dict) -> torch.Tensor:
-    """
-    Compute graph-based causal regularization loss.
-
-    For each causal edge in the batch, compare model predictions for the effect node
-    under the same intervention at different times, using KL divergence as a proxy.
-
-    Args:
-        model (nn.Module): DYNAMO model instance.
-        batch (tuple): Batch of (input_ids, attention_mask, time, labels, edge_indices).
-        config (dict): Configuration dictionary.
-
-    Returns:
-        torch.Tensor: Causal regularization loss.
-    """
-    input_ids, attention_mask, time, _, edge_indices = batch
-    batch_size = input_ids.size(0)
-    device = input_ids.device
-
-    if not config.get('use_gnn', True):
-        return torch.tensor(0.0, device=device)
-
-    causal_loss = 0.0
-    num_pairs = 0
-
-    # For each sample in the batch
-    for i in range(batch_size):
-        t_i = time[i]
-        edges_i = edge_indices[i]  # [2, num_edges]
-        if edges_i.size(1) == 0:  # Skip if no edges
-            continue
-
-        # Simulate intervention: perturb input by focusing on effect node
-        for edge in edges_i.t():  # Iterate over edges
-            # Create a synthetic time point (e.g., t_i + delta)
-            t_j = t_i + torch.tensor(config.get('time_delta', 86400.0), device=device)  # 1 day shift
-            logits_i = model(input_ids[i:i+1], attention_mask[i:i+1], t_i.unsqueeze(0), edges_i)
-            logits_j = model(input_ids[i:i+1], attention_mask[i:i+1], t_j.unsqueeze(0), edges_i)
-
-            # Compute KL divergence between softmax outputs
-            probs_i = F.softmax(logits_i, dim=-1)
-            probs_j = F.softmax(logits_j, dim=-1)
-            kl_div = F.kl_div(probs_i.log(), probs_j, reduction='batchmean')
-            causal_loss += kl_div
-            num_pairs += 1
-
-    return causal_loss / max(1, num_pairs) if num_pairs > 0 else torch.tensor(0.0, device=device)
-
-def train_model(config: dict, data_path: str = 'data/dynamodata.json', device: str = 'cuda'):
+def train_model(config: dict, data_path: str = 'processed_dynamodata_qa.pt', device: str = 'cuda'):
     """
     Train the DYNAMO model with the given configuration and data.
 
     Args:
         config (dict): Configuration dictionary with model hyperparameters.
-        data_path (str): Path to JSON data file.
+        data_path (str): Path to preprocessed data file.
         device (str): Device to train on (e.g., 'cuda' or 'cpu').
     """
     # Initialize dataset and dataloader
     try:
-        train_dataset = DynamoDataset(data_path)
+        train_dataset = DynamoQADataset(data_path)
     except Exception as e:
         raise RuntimeError(f"Failed to load dataset from {data_path}: {str(e)}")
     
-    train_loader = DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True)
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=config['batch_size'], 
+        shuffle=True,
+        collate_fn=train_dataset.collate_fn
+    )
 
     # Model and optimizer
-    model = DynamoModel(config).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'])
-    criterion = nn.CrossEntropyLoss()
+    model = create_dynamo_model(config['transformer_path'], **config)
+    model = model.to(device)
+    
+    # Optimizer and scheduler
+    optimizer = torch.optim.AdamW(
+        model.parameters(), 
+        lr=config['learning_rate'],
+        weight_decay=config.get('weight_decay', 0.01)
+    )
+    
+    num_epochs = config['epochs']
+    num_training_steps = num_epochs * len(train_loader)
+    num_warmup_steps = int(config.get('warmup_ratio', 0.1) * num_training_steps)
+    
+    lr_scheduler = get_linear_schedule_with_warmup(
+        optimizer=optimizer,
+        num_warmup_steps=num_warmup_steps,
+        num_training_steps=num_training_steps
+    )
 
     # Training loop
     model.train()
-    for epoch in range(config['epochs']):
+    for epoch in range(num_epochs):
         total_loss = 0
-        for batch in train_loader:
-            input_ids, attention_mask, time, labels, edge_indices = [x.to(device) for x in batch]
-            optimizer.zero_grad()
+        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}")
+        
+        for batch_idx, batch in enumerate(progress_bar):
+            # Move batch to device
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
+            time = batch['time'].to(device)
+            edge_indices = batch['edge_indices']
             
             # Forward pass
-            logits = model(input_ids, attention_mask, time, edge_indices)
-            loss = criterion(logits, labels)
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                time=time,
+                edge_indices=edge_indices,
+                labels=labels
+            )
             
-            # Causal regularization
-            if config.get('use_causal_reg', False):
-                causal_loss = compute_causal_loss(model, batch, config)
-                loss += config['lambda_causal'] * causal_loss
+            loss = outputs.loss
             
             # Backward pass
             loss.backward()
+            
+            # Gradient clipping
+            if config.get('max_grad_norm', 1.0) > 0:
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), 
+                    config['max_grad_norm']
+                )
+            
             optimizer.step()
+            lr_scheduler.step()
+            optimizer.zero_grad()
+            
             total_loss += loss.item()
+            
+            # Update progress bar
+            if batch_idx % config.get('log_interval', 10) == 0:
+                progress_bar.set_postfix({
+                    "loss": loss.item(),
+                    "lr": lr_scheduler.get_last_lr()[0]
+                })
         
-        print(f"Epoch {epoch + 1}/{config['epochs']}, Loss: {total_loss / len(train_loader):.4f}")
-
+        avg_loss = total_loss / len(train_loader)
+        print(f"Epoch {epoch+1} average loss: {avg_loss:.4f}")
+        
+        # Save checkpoint
+        if (epoch + 1) % config.get('save_interval', 1) == 0:
+            checkpoint_path = f"checkpoint_epoch_{epoch+1}.pth"
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'lr_scheduler_state_dict': lr_scheduler.state_dict(),
+                'loss': avg_loss,
+            }, checkpoint_path)
+            print(f"Checkpoint saved to {checkpoint_path}")
+    
+    # Save final model
+    torch.save(model.state_dict(), "dynamo_qa_model_final.pth")
+    print("Training completed. Final model saved to dynamo_qa_model_final.pth")
+    
     return model
 
+def main():
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description="Train DYNAMO QA model.")
+    parser.add_argument('--data_path', type=str, default='processed_dynamodata_qa.pt',
+                        help="Path to preprocessed data file")
+    parser.add_argument('--transformer', type=str, default='meta-llama/Llama-2-7b-hf',
+                        help="HuggingFace transformer model name")
+    parser.add_argument('--batch_size', type=int, default=2,
+                        help="Training batch size")
+    parser.add_argument('--epochs', type=int, default=3,
+                        help="Number of training epochs")
+    parser.add_argument('--learning_rate', type=float, default=5e-5,
+                        help="Learning rate")
+    parser.add_argument('--weight_decay', type=float, default=0.01,
+                        help="Weight decay for optimizer")
+    parser.add_argument('--max_grad_norm', type=float, default=1.0,
+                        help="Maximum gradient norm for clipping")
+    parser.add_argument('--warmup_ratio', type=float, default=0.1,
+                        help="Ratio of training steps for warmup")
+    parser.add_argument('--log_interval', type=int, default=10,
+                        help="Number of steps between logging")
+    parser.add_argument('--save_interval', type=int, default=1,
+                        help="Number of epochs between checkpoints")
+    parser.add_argument('--use_time2vec', type=bool, default=True,
+                        help="Whether to use Time2Vec embeddings")
+    parser.add_argument('--use_gnn', type=bool, default=True,
+                        help="Whether to use GNN component")
+    parser.add_argument('--time2vec_dim', type=int, default=128,
+                        help="Dimension of Time2Vec embeddings")
+    parser.add_argument('--node_dim', type=int, default=256,
+                        help="Dimension of node embeddings")
+    parser.add_argument('--gnn_output_dim', type=int, default=256,
+                        help="Output dimension of GNN")
+    parser.add_argument('--gnn_layers', type=int, default=2,
+                        help="Number of GNN layers")
+    parser.add_argument('--fused_dim', type=int, default=512,
+                        help="Dimension of fused features")
+    parser.add_argument('--dropout_rate', type=float, default=0.1,
+                        help="Dropout rate")
+    parser.add_argument('--pooling_type', type=str, default='mean',
+                        choices=['mean', 'max', 'sum', 'attention'],
+                        help="Graph pooling type")
+    parser.add_argument('--freeze_transformer', type=bool, default=False,
+                        help="Whether to freeze transformer parameters")
+    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
+                        help="Device to train on")
+    
+    args = parser.parse_args()
+    
+    # Create config dictionary
+    config = {
+        'transformer_path': args.transformer,
+        'batch_size': args.batch_size,
+        'epochs': args.epochs,
+        'learning_rate': args.learning_rate,
+        'weight_decay': args.weight_decay,
+        'max_grad_norm': args.max_grad_norm,
+        'warmup_ratio': args.warmup_ratio,
+        'log_interval': args.log_interval,
+        'save_interval': args.save_interval,
+        'use_time2vec': args.use_time2vec,
+        'use_gnn': args.use_gnn,
+        'time2vec_dim': args.time2vec_dim,
+        'node_dim': args.node_dim,
+        'gnn_output_dim': args.gnn_output_dim,
+        'gnn_layers': args.gnn_layers,
+        'fused_dim': args.fused_dim,
+        'dropout_rate': args.dropout_rate,
+        'pooling_type': args.pooling_type,
+        'freeze_transformer': args.freeze_transformer,
+    }
+    
+    # Train the model
+    model = train_model(config, args.data_path, args.device)
+
 if __name__ == "__main__":
-    # Parse command-line arguments for variant selection
-    parser = argparse.ArgumentParser(description="Train DYNAMO model with specified variant.")
-    parser.add_argument('--variant', type=str, default='full',
-                        choices=['full', 'no_time2vec', 'no_gnn', 'no_causal_reg'],
-                        help="Model variant to train")
-    parser.add_argument('--data_path', type)
+    main()
