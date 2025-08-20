@@ -19,7 +19,7 @@ The model learns to:
 - **Parameter Efficient**: Only adds ~10M parameters to base LLaMA
 - **Drift Resistant**: Maintains performance across different time periods
 
-# TEMPiRL 
+# TEMPiRL Running
 
 TEMPiRL is a parameter-efficient framework that enhances LLMs with efficient temporal and causal reasoning capabilities for time-sensitive question answering, avoiding full retraining.
 
@@ -47,20 +47,6 @@ python -m spacy download en_core_web_sm
 pip install huggingface_hub
 huggingface-cli login
 ```
-
-## Understanding the Architecture
-
-TEMPiRL combines three key components with LLaMA:
-
-1. **Time2Vec**: Encodes temporal information using learnable periodic functions
-2. **Causal GNN**: Processes causal relationship graphs extracted from text
-3. **Fusion Layer**: Combines temporal, causal, and textual representations
-
-The model learns to:
-- Understand when questions are asked (temporal context)
-- Follow causal reasoning chains from provided traces
-- Generate accurate answers for time-sensitive queries without forgetting past knowledge
-
 ## Quick Start 
 
 
