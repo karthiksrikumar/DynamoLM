@@ -8,7 +8,6 @@ TEMPiRL is a parameter-efficient framework that enhances LLMs with efficient tem
 - Python 3.10+
 - NVIDIA GPU with CUDA 11.8+ (A100 recommended for full training)
 - Hugging Face access token for LLaMA-2 models
-- At least 32GB RAM for 7B model training
 
 ## Installation
 
