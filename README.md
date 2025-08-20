@@ -1,5 +1,5 @@
 # Tempiril overview
-yada yada take from paper
+yada yada take from paper (important)
 
 TEMPiRL combines three key components:
 
