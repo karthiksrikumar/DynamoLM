@@ -1,243 +1,259 @@
+# processing.py
 import json
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
-import argparse
-from model import DynamoModel, create_dynamo_model
+from tokenizer_utils import DynamoTokenizer
+import re
+from typing import List, Dict, Any
 import os
-from typing import List, Tuple, Dict, Any
-from transformers import get_linear_schedule_with_warmup
-from tqdm import tqdm
 
-class DynamoQADataset(Dataset):
-    """Custom dataset for DYNAMO QA, loading from preprocessed .pt file."""
-    def __init__(self, data_path: str):
-        """
-        Args:
-            data_path (str): Path to .pt file containing preprocessed training data.
-        """
-        if not os.path.exists(data_path):
-            raise FileNotFoundError(f"Data file {data_path} not found.")
-        
-        # Load the preprocessed data
-        data_dict = torch.load(data_path)
-        self.processed_data = data_dict["processed_data"]
-        self.node_list = data_dict["node_list"]
-
-    def __len__(self) -> int:
-        return len(self.processed_data)
-
-    def __getitem__(self, idx: int) -> Dict[str, Any]:
-        return self.processed_data[idx]
+def parse_causal_trace(trace_str: str, node_list: List[str]) -> torch.Tensor:
+    """Parse causal trace string into edge index tensor"""
+    pattern = r'\[([^\]]+)\]'
+    node_sequence = re.findall(pattern, trace_str)
     
-    def collate_fn(self, batch):
-        """
-        Custom collate function to handle variable-length edge indices.
-        """
-        # Stack tensors that have consistent shapes
-        input_ids = torch.stack([item['input_ids'] for item in batch])
-        attention_mask = torch.stack([item['attention_mask'] for item in batch])
-        labels = torch.stack([item['labels'] for item in batch])
-        time = torch.stack([item['time'] for item in batch])
+    # Create node to index mapping
+    node_to_index = {node: idx for idx, node in enumerate(node_list)}
+    
+    edges = []
+    
+    # Create edges between consecutive nodes in the trace
+    for i in range(len(node_sequence) - 1):
+        src_node = node_sequence[i].strip()
+        dst_node = node_sequence[i + 1].strip()
         
-        # Edge indices need special handling as they may have different shapes
-        edge_indices = [item['edge_index'] for item in batch]
+        src_idx = node_to_index.get(src_node)
+        dst_idx = node_to_index.get(dst_node)
         
-        return {
-            'input_ids': input_ids,
-            'attention_mask': attention_mask,
-            'labels': labels,
-            'time': time,
-            'edge_indices': edge_indices
-        }
+        if src_idx is not None and dst_idx is not None:
+            edges.append([src_idx, dst_idx])
+    
+    if not edges:
+        # Return empty edge index with correct shape [2, 0]
+        return torch.tensor([[], []], dtype=torch.long)
+    
+    # Convert to PyTorch Geometric format: [2, num_edges]
+    edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
+    return edge_index
 
-def train_model(config: dict, data_path: str = 'processed_dynamodata_qa.pt', device: str = 'cuda'):
-    """
-    Train the DYNAMO model with the given configuration and data.
+def extract_all_nodes(raw_data: List[Dict]) -> List[str]:
+    """Extract all unique nodes from the dataset"""
+    all_nodes = set()
+    pattern = r'\[([^\]]+)\]'
+    
+    for item in raw_data:
+        trace_str = item["causal_trace"]
+        nodes_in_trace = re.findall(pattern, trace_str)
+        # Clean and add nodes
+        for node in nodes_in_trace:
+            all_nodes.add(node.strip())
+    
+    return sorted(list(all_nodes))  # Sort for consistency
 
-    Args:
-        config (dict): Configuration dictionary with model hyperparameters.
-        data_path (str): Path to preprocessed data file.
-        device (str): Device to train on (e.g., 'cuda' or 'cpu').
-    """
-    # Initialize dataset and dataloader
+def parse_date_to_normalized_time(date_str: str) -> float:
+    """Convert date string to normalized time value"""
     try:
-        train_dataset = DynamoQADataset(data_path)
+        year, month, day = map(int, date_str.split('-'))
+        # Normalize time as year + fractional year
+        time_value = year + (month - 1) / 12 + (day - 1) / 365
+        return time_value
     except Exception as e:
-        raise RuntimeError(f"Failed to load dataset from {data_path}: {str(e)}")
-    
-    train_loader = DataLoader(
-        train_dataset, 
-        batch_size=config['batch_size'], 
-        shuffle=True,
-        collate_fn=train_dataset.collate_fn
-    )
+        raise ValueError(f"Invalid date format '{date_str}': {e}")
 
-    # Model and optimizer
-    model = create_dynamo_model(config['transformer_path'], **config)
-    model = model.to(device)
+def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "meta-llama/Llama-2-7b-hf"):
+    """
+    Preprocess QA data for DYNAMO model training.
     
-    # Optimizer and scheduler
-    optimizer = torch.optim.AdamW(
-        model.parameters(), 
-        lr=config['learning_rate'],
-        weight_decay=config.get('weight_decay', 0.01)
-    )
+    Args:
+        input_file: Path to JSON file with raw QA data
+        output_file: Path to save processed .pt file
+        model_name: HuggingFace model name for tokenizer
+    """
+    # Check if input file exists
+    if not os.path.exists(input_file):
+        raise FileNotFoundError(f"Input file {input_file} not found")
     
-    num_epochs = config['epochs']
-    num_training_steps = num_epochs * len(train_loader)
-    num_warmup_steps = int(config.get('warmup_ratio', 0.1) * num_training_steps)
+    # Load raw data
+    print(f"Loading data from {input_file}...")
+    with open(input_file, 'r') as f:
+        raw_data = json.load(f)
     
-    lr_scheduler = get_linear_schedule_with_warmup(
-        optimizer=optimizer,
-        num_warmup_steps=num_warmup_steps,
-        num_training_steps=num_training_steps
-    )
+    print(f"Loaded {len(raw_data)} QA pairs")
+    
+    # Initialize tokenizer
+    print(f"Initializing tokenizer for {model_name}...")
+    try:
+        tokenizer = DynamoTokenizer(model_name)
+    except Exception as e:
+        print(f"Failed to load tokenizer: {e}")
+        print("Falling back to a simpler model...")
+        tokenizer = DynamoTokenizer("gpt2")  # Fallback option
+    
+    # Extract all unique nodes
+    print("Extracting unique nodes from causal traces...")
+    global_node_list = extract_all_nodes(raw_data)
+    print(f"Found {len(global_node_list)} unique nodes")
+    
+    # Process each QA pair
+    processed_data_list = []
+    failed_items = 0
+    
+    print("Processing QA pairs...")
+    for i, item in enumerate(raw_data):
+        try:
+            question = item["question"]
+            answer = item["answer"]
+            date_str = item["date"]
+            causal_trace = item["causal_trace"]
+            
+            # Tokenize QA pair
+            tokenized = tokenizer.tokenize_qa_pair(question, answer)
+            
+            # Parse date to normalized time
+            time_value = parse_date_to_normalized_time(date_str)
+            
+            # Parse causal trace to edge index
+            edge_index = parse_causal_trace(causal_trace, global_node_list)
+            
+            # Create data point
+            data_point = {
+                "input_ids": tokenized["input_ids"],
+                "attention_mask": tokenized["attention_mask"],
+                "labels": tokenized["labels"],
+                "time": torch.tensor([time_value], dtype=torch.float32),
+                "edge_index": edge_index,
+                "original_question": question,
+                "original_answer": answer,
+                "original_date": date_str,
+                "original_trace": causal_trace
+            }
+            
+            processed_data_list.append(data_point)
+            
+            if (i + 1) % 10 == 0:
+                print(f"Processed {i + 1}/{len(raw_data)} items")
+                
+        except Exception as e:
+            print(f"Failed to process item {i}: {e}")
+            failed_items += 1
+            continue
+    
+    print(f"Successfully processed {len(processed_data_list)} items")
+    if failed_items > 0:
+        print(f"Failed to process {failed_items} items")
+    
+    # Create final data structure
+    processed_data = {
+        "processed_data": processed_data_list,
+        "node_list": global_node_list,
+        "num_samples": len(processed_data_list),
+        "num_nodes": len(global_node_list),
+        "model_name": model_name
+    }
+    
+    # Save processed data
+    print(f"Saving processed data to {output_file}...")
+    torch.save(processed_data, output_file)
+    
+    # Print summary
+    print("\n=== PROCESSING SUMMARY ===")
+    print(f"Total samples: {len(processed_data_list)}")
+    print(f"Unique nodes: {len(global_node_list)}")
+    print(f"Failed items: {failed_items}")
+    print(f"Output file: {output_file}")
+    
+    # Print sample node list (first 10)
+    print(f"\nSample nodes: {global_node_list[:10]}")
+    
+    # Print sample data point info
+    if processed_data_list:
+        sample = processed_data_list[0]
+        print(f"\nSample data point:")
+        print(f"  Input IDs shape: {sample['input_ids'].shape}")
+        print(f"  Edge index shape: {sample['edge_index'].shape}")
+        print(f"  Time value: {sample['time'].item():.4f}")
+        print(f"  Question: {sample['original_question'][:50]}...")
+    
+    print(f"\nProcessed data saved to {output_file}")
+    return processed_data
 
-    # Training loop
-    model.train()
-    for epoch in range(num_epochs):
-        total_loss = 0
-        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}")
-        
-        for batch_idx, batch in enumerate(progress_bar):
-            # Move batch to device
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['labels'].to(device)
-            time = batch['time'].to(device)
-            edge_indices = batch['edge_indices']
-            
-            # Forward pass
-            outputs = model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                time=time,
-                edge_indices=edge_indices,
-                labels=labels
-            )
-            
-            loss = outputs.loss
-            
-            # Backward pass
-            loss.backward()
-            
-            # Gradient clipping
-            if config.get('max_grad_norm', 1.0) > 0:
-                torch.nn.utils.clip_grad_norm_(
-                    model.parameters(), 
-                    config['max_grad_norm']
-                )
-            
-            optimizer.step()
-            lr_scheduler.step()
-            optimizer.zero_grad()
-            
-            total_loss += loss.item()
-            
-            # Update progress bar
-            if batch_idx % config.get('log_interval', 10) == 0:
-                progress_bar.set_postfix({
-                    "loss": loss.item(),
-                    "lr": lr_scheduler.get_last_lr()[0]
-                })
-        
-        avg_loss = total_loss / len(train_loader)
-        print(f"Epoch {epoch+1} average loss: {avg_loss:.4f}")
-        
-        # Save checkpoint
-        if (epoch + 1) % config.get('save_interval', 1) == 0:
-            checkpoint_path = f"checkpoint_epoch_{epoch+1}.pth"
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'lr_scheduler_state_dict': lr_scheduler.state_dict(),
-                'loss': avg_loss,
-            }, checkpoint_path)
-            print(f"Checkpoint saved to {checkpoint_path}")
+def validate_processed_data(data_path: str) -> bool:
+    """Validate that processed data is compatible with the model"""
+    print(f"Validating processed data from {data_path}...")
     
-    # Save final model
-    torch.save(model.state_dict(), "dynamo_qa_model_final.pth")
-    print("Training completed. Final model saved to dynamo_qa_model_final.pth")
-    
-    return model
+    try:
+        data_dict = torch.load(data_path)
+        required_keys = ["processed_data", "node_list"]
+        
+        for key in required_keys:
+            if key not in data_dict:
+                print(f"Missing required key: {key}")
+                return False
+        
+        processed_data = data_dict["processed_data"]
+        node_list = data_dict["node_list"]
+        
+        print(f"Found {len(processed_data)} samples and {len(node_list)} nodes")
+        
+        # Validate sample structure
+        if processed_data:
+            sample = processed_data[0]
+            required_sample_keys = ["input_ids", "attention_mask", "labels", "time", "edge_index"]
+            
+            for key in required_sample_keys:
+                if key not in sample:
+                    print(f"Missing required sample key: {key}")
+                    return False
+            
+            # Check tensor shapes
+            print(f"Sample tensor shapes:")
+            print(f"  input_ids: {sample['input_ids'].shape}")
+            print(f"  attention_mask: {sample['attention_mask'].shape}")
+            print(f"  labels: {sample['labels'].shape}")
+            print(f"  time: {sample['time'].shape}")
+            print(f"  edge_index: {sample['edge_index'].shape}")
+            
+            # Validate edge index format
+            edge_index = sample['edge_index']
+            if edge_index.numel() > 0:
+                if edge_index.dim() != 2 or edge_index.size(0) != 2:
+                    print(f"Invalid edge index shape: {edge_index.shape}, expected [2, num_edges]")
+                    return False
+                
+                max_node_idx = edge_index.max().item()
+                if max_node_idx >= len(node_list):
+                    print(f"Edge index references node {max_node_idx} but only {len(node_list)} nodes exist")
+                    return False
+        
+        print("Data validation passed!")
+        return True
+        
+    except Exception as e:
+        print(f"Validation failed: {e}")
+        return False
 
-def main():
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Train DYNAMO QA model.")
-    parser.add_argument('--data_path', type=str, default='processed_dynamodata_qa.pt',
-                        help="Path to preprocessed data file")
-    parser.add_argument('--transformer', type=str, default='meta-llama/Llama-2-7b-hf',
-                        help="HuggingFace transformer model name")
-    parser.add_argument('--batch_size', type=int, default=2,
-                        help="Training batch size")
-    parser.add_argument('--epochs', type=int, default=3,
-                        help="Number of training epochs")
-    parser.add_argument('--learning_rate', type=float, default=5e-5,
-                        help="Learning rate")
-    parser.add_argument('--weight_decay', type=float, default=0.01,
-                        help="Weight decay for optimizer")
-    parser.add_argument('--max_grad_norm', type=float, default=1.0,
-                        help="Maximum gradient norm for clipping")
-    parser.add_argument('--warmup_ratio', type=float, default=0.1,
-                        help="Ratio of training steps for warmup")
-    parser.add_argument('--log_interval', type=int, default=10,
-                        help="Number of steps between logging")
-    parser.add_argument('--save_interval', type=int, default=1,
-                        help="Number of epochs between checkpoints")
-    parser.add_argument('--use_time2vec', type=bool, default=True,
-                        help="Whether to use Time2Vec embeddings")
-    parser.add_argument('--use_gnn', type=bool, default=True,
-                        help="Whether to use GNN component")
-    parser.add_argument('--time2vec_dim', type=int, default=128,
-                        help="Dimension of Time2Vec embeddings")
-    parser.add_argument('--node_dim', type=int, default=256,
-                        help="Dimension of node embeddings")
-    parser.add_argument('--gnn_output_dim', type=int, default=256,
-                        help="Output dimension of GNN")
-    parser.add_argument('--gnn_layers', type=int, default=2,
-                        help="Number of GNN layers")
-    parser.add_argument('--fused_dim', type=int, default=512,
-                        help="Dimension of fused features")
-    parser.add_argument('--dropout_rate', type=float, default=0.1,
-                        help="Dropout rate")
-    parser.add_argument('--pooling_type', type=str, default='mean',
-                        choices=['mean', 'max', 'sum', 'attention'],
-                        help="Graph pooling type")
-    parser.add_argument('--freeze_transformer', type=bool, default=False,
-                        help="Whether to freeze transformer parameters")
-    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
-                        help="Device to train on")
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Preprocess DYNAMO QA data")
+    parser.add_argument('--input', type=str, default='data/dynamodata.json',
+                        help="Input JSON file path")
+    parser.add_argument('--output', type=str, default='processed_dynamodata_qa.pt',
+                        help="Output processed data file path")
+    parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-hf',
+                        help="Model name for tokenizer")
+    parser.add_argument('--validate', action='store_true',
+                        help="Only validate existing processed data")
     
     args = parser.parse_args()
     
-    # Create config dictionary
-    config = {
-        'transformer_path': args.transformer,
-        'batch_size': args.batch_size,
-        'epochs': args.epochs,
-        'learning_rate': args.learning_rate,
-        'weight_decay': args.weight_decay,
-        'max_grad_norm': args.max_grad_norm,
-        'warmup_ratio': args.warmup_ratio,
-        'log_interval': args.log_interval,
-        'save_interval': args.save_interval,
-        'use_time2vec': args.use_time2vec,
-        'use_gnn': args.use_gnn,
-        'time2vec_dim': args.time2vec_dim,
-        'node_dim': args.node_dim,
-        'gnn_output_dim': args.gnn_output_dim,
-        'gnn_layers': args.gnn_layers,
-        'fused_dim': args.fused_dim,
-        'dropout_rate': args.dropout_rate,
-        'pooling_type': args.pooling_type,
-        'freeze_transformer': args.freeze_transformer,
-    }
-    
-    # Train the model
-    model = train_model(config, args.data_path, args.device)
-
-if __name__ == "__main__":
-    main()
+    if args.validate:
+        if os.path.exists(args.output):
+            validate_processed_data(args.output)
+        else:
+            print(f"File {args.output} not found")
+    else:
+        # Process the data
+        processed_data = preprocess_qa_data(args.input, args.output, args.model)
+        
+        # Validate the processed data
+        validate_processed_data(args.output)
