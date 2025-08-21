@@ -339,7 +339,7 @@ if __name__ == "__main__":
     }
     
     model = DynamoModel(config)
-    
+
     total_params, trainable_params = model.count_parameters()
     print(f"Total parameters: {total_params:,}")
     print(f"Trainable parameters: {trainable_params:,}")
