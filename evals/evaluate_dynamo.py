@@ -10,13 +10,7 @@ import os
 from typing import Dict, List, Tuple
 
 class TestDataset(Dataset):
-    """Dataset for Test 2 evaluation, loading from dynamodata.json."""
     def __init__(self, data_path: str, batch_idx: int):
-        """
-        Args:
-            data_path (str): Path to dynamodata.json.
-            batch_idx (int): Batch to evaluate (0: Batch 1, 1: Batch 2, 2: Batch 3).
-        """
         if not os.path.exists(data_path):
             raise FileNotFoundError(f"Data file {data_path} not found.")
         
