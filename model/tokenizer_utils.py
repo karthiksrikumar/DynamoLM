@@ -10,17 +10,11 @@ class DynamoTokenizer:
             self.tokenizer.pad_token = self.tokenizer.eos_token
     
     def tokenize_qa_pair(self, question: str, answer: str = None, max_length: int = 512) -> Dict[str, torch.Tensor]:
-        """
-        Tokenize a question-answer pair for causal language modeling.
-        If answer is None, only the question is tokenized (for inference).
-        """
-        # Format the text
         if answer:
             text = f"<s> Question: {question} Answer: {answer} </s>"
         else:
             text = f"<s> Question: {question} Answer:"
         
-        # Tokenize
         encoding = self.tokenizer(
             text,
             padding="max_length",
@@ -29,7 +23,6 @@ class DynamoTokenizer:
             return_tensors="pt"
         )
         
-        # For training, create labels with question part masked
         if answer:
             input_ids = encoding["input_ids"][0]
             
@@ -60,6 +53,5 @@ class DynamoTokenizer:
         return self.tokenizer.decode(token_ids, skip_special_tokens=True)
     
     def extract_answer(self, generated_text: str) -> str:
-        """Extract the answer part from generated text."""
         answer_start = generated_text.find("Answer:") + len("Answer:")
         return generated_text[answer_start:].strip()
