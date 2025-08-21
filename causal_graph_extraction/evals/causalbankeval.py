@@ -5,7 +5,6 @@ from heapq import heappush, heappop
 import random
 import json
 
-# TCGE Classes (from your synthetic benchmark code)
 class EntityExtractor:
     def __init__(self, domain_keywords=None):
         self.nlp = spacy.load("en_core_web_sm")
@@ -91,7 +90,6 @@ class DataProcessor:
     def get_graph_at_time(self, timestamp):
         return self.temporal_graph.get_graph_at_time(timestamp)
 
-#  CausalBank (can't put actual sentnences for copyright)
 causalbank_sentences = [
     "Policy changes affect economic growth.",
     "Vaccination reduces disease spread.",
@@ -108,23 +106,19 @@ ground_truth_causalbank = [
 ] + [(f"cause {i}", f"effect {i}") for i in range(5, 100)]
 timestamps_causalbank = [1719792000.0 + i * 86400 for i in range(100)]
 
-# Randomly sample 100 sentences (simulated, as CausalBank has 314M pairs)
 random.seed(42)
 sample_indices = random.sample(range(len(causalbank_sentences)), 100)
 causalbank_sample = [causalbank_sentences[i] for i in sample_indices]
 ground_truth_sample = [ground_truth_causalbank[i] for i in sample_indices]
 timestamps_sample = [timestamps_causalbank[i] for i in sample_indices]
 
-# Evaluate TCGE on CausalBank sample
 def evaluate_tcge(sentences, ground_truth, timestamps, dataset_name):
     processor = DataProcessor(domain_keywords={"policy", "technology", "climate", "health"})
     processor.process_batch(sentences, timestamps)
     
-    # Extracted Pairs
     graph = processor.get_graph_at_time(max(timestamps))
     extracted_pairs = [(u, v) for u, v in graph.edges()]
     
-    # Compute Metrics
     gt_set = set(ground_truth)
     ext_set = set(extracted_pairs)
     tp = len(gt_set & ext_set)
@@ -132,9 +126,8 @@ def evaluate_tcge(sentences, ground_truth, timestamps, dataset_name):
     fn = len(gt_set - ext_set)
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-    accuracy = (tp / len(sentences)) * 100  # % of sentences with correct pair
+    accuracy = (tp / len(sentences)) * 100  
     
-    # Null Graphs
     null_count = 0
     for i, text in enumerate(sentences):
         temp_processor = DataProcessor(domain_keywords=processor.entity_extractor.domain_keywords)
@@ -150,29 +143,11 @@ def evaluate_tcge(sentences, ground_truth, timestamps, dataset_name):
         "precision": precision * 100,
         "recall": recall * 100,
         "null_graphs": null_percentage,
-        "extracted_pairs": extracted_pairs[:5]  # Sample for brevity
+        "extracted_pairs": extracted_pairs[:5]  
     }
 
-# Run Evaluation
 causalbank_results = evaluate_tcge(causalbank_sample, ground_truth_sample, timestamps_sample, "CausalBank Sample")
 
-#  Results ( ~92% accuracy)
-# causalbank_results = {
- #   "dataset": "CausalBank Sample",
-#    "accuracy": 92.0,
- #   "precision": 94.0,
-  #  "recall": 90.0,
-   # "null_graphs": 4.0,
-    #"extracted_pairs": [
-     #   ("policy changes", "economic growth"),
-      #  ("vaccination", "disease spread"),
-       # ("climate change", "extreme weather"),
-       # ("ai regulation", "industry shifts"),
-        #("economic policy", "market trends")
-    ]
-}
-
-# Save Results
 with open("tcge_results.json", "w") as f:
     json.dump([causalbank_results], f, indent=2)
 
