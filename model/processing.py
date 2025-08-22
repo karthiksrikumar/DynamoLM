@@ -1,10 +1,14 @@
-# processing.py
+# processing.py - Fixed version
 import json
 import torch
+import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
 from tokenizer_utils import DynamoTokenizer
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import os
+import numpy as np
+from sklearn.model_selection import train_test_split
 
 def parse_causal_trace(trace_str: str, node_list: List[str]) -> torch.Tensor:
     """Parse causal trace string into edge index tensor"""
@@ -59,15 +63,61 @@ def parse_date_to_normalized_time(date_str: str) -> float:
     except Exception as e:
         raise ValueError(f"Invalid date format '{date_str}': {e}")
 
-def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "meta-llama/Llama-2-7b-hf"):
+class DynamoDataset(Dataset):
+    """Dataset class for DYNAMO QA data"""
+    
+    def __init__(self, processed_data: List[Dict]):
+        self.data = processed_data
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        item = self.data[idx]
+        return {
+            'input_ids': item['input_ids'],
+            'attention_mask': item['attention_mask'],
+            'labels': item['labels'],
+            'time': item['time'],
+            'edge_index': item['edge_index']
+        }
+
+def collate_fn(batch):
+    """Custom collate function for batching"""
+    input_ids = torch.stack([item['input_ids'] for item in batch])
+    attention_mask = torch.stack([item['attention_mask'] for item in batch])
+    labels = torch.stack([item['labels'] for item in batch])
+    time = torch.stack([item['time'] for item in batch])
+    
+    # For edge indices, we need to handle variable sizes
+    edge_indices = []
+    for item in batch:
+        edge_indices.append(item['edge_index'])
+    
+    return {
+        'input_ids': input_ids,
+        'attention_mask': attention_mask,
+        'labels': labels,
+        'time': time,
+        'edge_indices': edge_indices
+    }
+
+def preprocess_qa_data(input_file: str, output_dir: str = "processed_data", 
+                      model_name: str = "meta-llama/Llama-2-7b-hf",
+                      test_size: float = 0.2, random_state: int = 42):
     """
-    Preprocess QA data for DYNAMO model training.
+    Preprocess QA data for DYNAMO model training with train-test split.
     
     Args:
         input_file: Path to JSON file with raw QA data
-        output_file: Path to save processed .pt file
+        output_dir: Directory to save processed files
         model_name: HuggingFace model name for tokenizer
+        test_size: Fraction of data to use for testing
+        random_state: Random seed for reproducibility
     """
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    
     # Check if input file exists
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"Input file {input_file} not found")
@@ -85,8 +135,8 @@ def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "met
         tokenizer = DynamoTokenizer(model_name)
     except Exception as e:
         print(f"Failed to load tokenizer: {e}")
-        print("Falling back to a simpler model...")
-        tokenizer = DynamoTokenizer("gpt2")  # Fallback option
+        print("Falling back to gpt2...")
+        tokenizer = DynamoTokenizer("gpt2")
     
     # Extract all unique nodes
     print("Extracting unique nodes from causal traces...")
@@ -141,25 +191,55 @@ def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "met
     if failed_items > 0:
         print(f"Failed to process {failed_items} items")
     
-    # Create final data structure
-    processed_data = {
-        "processed_data": processed_data_list,
+    # Train-test split
+    print(f"Splitting data: {1-test_size:.1%} train, {test_size:.1%} test")
+    train_data, test_data = train_test_split(
+        processed_data_list, 
+        test_size=test_size, 
+        random_state=random_state
+    )
+    
+    print(f"Train samples: {len(train_data)}")
+    print(f"Test samples: {len(test_data)}")
+    
+    # Create data structures
+    train_processed = {
+        "processed_data": train_data,
         "node_list": global_node_list,
-        "num_samples": len(processed_data_list),
+        "num_samples": len(train_data),
         "num_nodes": len(global_node_list),
-        "model_name": model_name
+        "model_name": model_name,
+        "split": "train"
+    }
+    
+    test_processed = {
+        "processed_data": test_data,
+        "node_list": global_node_list,
+        "num_samples": len(test_data),
+        "num_nodes": len(global_node_list),
+        "model_name": model_name,
+        "split": "test"
     }
     
     # Save processed data
-    print(f"Saving processed data to {output_file}...")
-    torch.save(processed_data, output_file)
+    train_path = os.path.join(output_dir, "train_data.pt")
+    test_path = os.path.join(output_dir, "test_data.pt")
+    
+    print(f"Saving train data to {train_path}...")
+    torch.save(train_processed, train_path)
+    
+    print(f"Saving test data to {test_path}...")
+    torch.save(test_processed, test_path)
     
     # Print summary
     print("\n=== PROCESSING SUMMARY ===")
     print(f"Total samples: {len(processed_data_list)}")
+    print(f"Train samples: {len(train_data)}")
+    print(f"Test samples: {len(test_data)}")
     print(f"Unique nodes: {len(global_node_list)}")
     print(f"Failed items: {failed_items}")
-    print(f"Output file: {output_file}")
+    print(f"Train file: {train_path}")
+    print(f"Test file: {test_path}")
     
     # Print sample node list (first 10)
     print(f"\nSample nodes: {global_node_list[:10]}")
@@ -173,8 +253,44 @@ def preprocess_qa_data(input_file: str, output_file: str, model_name: str = "met
         print(f"  Time value: {sample['time'].item():.4f}")
         print(f"  Question: {sample['original_question'][:50]}...")
     
-    print(f"\nProcessed data saved to {output_file}")
-    return processed_data
+    return train_processed, test_processed
+
+def load_processed_data(data_path: str) -> Tuple[DynamoDataset, List[str]]:
+    """Load processed data and return dataset and node list"""
+    print(f"Loading processed data from {data_path}...")
+    
+    data_dict = torch.load(data_path)
+    processed_data = data_dict["processed_data"]
+    node_list = data_dict["node_list"]
+    
+    dataset = DynamoDataset(processed_data)
+    
+    print(f"Loaded {len(dataset)} samples with {len(node_list)} nodes")
+    return dataset, node_list
+
+def create_dataloaders(train_dataset: DynamoDataset, test_dataset: DynamoDataset,
+                      batch_size: int = 4, num_workers: int = 2) -> Tuple[DataLoader, DataLoader]:
+    """Create train and test dataloaders"""
+    
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        collate_fn=collate_fn,
+        pin_memory=True
+    )
+    
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        collate_fn=collate_fn,
+        pin_memory=True
+    )
+    
+    return train_loader, test_loader
 
 def validate_processed_data(data_path: str) -> bool:
     """Validate that processed data is compatible with the model"""
@@ -237,23 +353,42 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preprocess DYNAMO QA data")
     parser.add_argument('--input', type=str, default='data/dynamodata.json',
                         help="Input JSON file path")
-    parser.add_argument('--output', type=str, default='processed_dynamodata_qa.pt',
-                        help="Output processed data file path")
+    parser.add_argument('--output_dir', type=str, default='processed_data',
+                        help="Output directory for processed files")
     parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-hf',
                         help="Model name for tokenizer")
+    parser.add_argument('--test_size', type=float, default=0.2,
+                        help="Fraction of data to use for testing")
     parser.add_argument('--validate', action='store_true',
                         help="Only validate existing processed data")
     
     args = parser.parse_args()
     
     if args.validate:
-        if os.path.exists(args.output):
-            validate_processed_data(args.output)
+        train_path = os.path.join(args.output_dir, "train_data.pt")
+        test_path = os.path.join(args.output_dir, "test_data.pt")
+        
+        if os.path.exists(train_path):
+            validate_processed_data(train_path)
         else:
-            print(f"File {args.output} not found")
+            print(f"File {train_path} not found")
+            
+        if os.path.exists(test_path):
+            validate_processed_data(test_path)
+        else:
+            print(f"File {test_path} not found")
     else:
         # Process the data
-        processed_data = preprocess_qa_data(args.input, args.output, args.model)
+        train_data, test_data = preprocess_qa_data(
+            args.input, 
+            args.output_dir, 
+            args.model,
+            args.test_size
+        )
         
         # Validate the processed data
-        validate_processed_data(args.output)
+        train_path = os.path.join(args.output_dir, "train_data.pt")
+        test_path = os.path.join(args.output_dir, "test_data.pt")
+        
+        validate_processed_data(train_path)
+        validate_processed_data(test_path)
