@@ -1,262 +1,257 @@
-# inference.py - Fixed inference script
+# utils.py - Fixed utility functions
 import torch
-from model import create_dynamo_model
-from tokenizer_utils import DynamoTokenizer
-from processing import parse_causal_trace, parse_date_to_normalized_time
-import argparse
+from transformers import get_linear_schedule_with_warmup
+from typing import Dict, List, Tuple
 import json
 import os
+import matplotlib.pyplot as plt
+import numpy as np
 
-def load_model_checkpoint(checkpoint_path: str, device: str = 'cuda'):
-    """Load model from checkpoint"""
-    print(f"Loading checkpoint from {checkpoint_path}...")
-    
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    
-    # Extract config and node list
-    config = checkpoint['config']
-    node_list = checkpoint['node_list']
-    
-    # Create model
-    model = create_dynamo_model(config['transformer'], **config)
-    
-    # Load state dict
-    model.load_state_dict(checkpoint['model_state_dict'])
-    
-    # Move to device and set to eval mode
-    model = model.to(device)
-    model.eval()
-    
-    print(f"Model loaded successfully")
-    print(f"Global step: {checkpoint.get('global_step', 'Unknown')}")
-    print(f"Best loss: {checkpoint.get('best_loss', 'Unknown')}")
-    
-    return model, node_list, config
+def get_linear_scheduler(optimizer, num_training_steps: int, warmup_steps: int):
+    """Get linear scheduler with warmup"""
+    return get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=warmup_steps,
+        num_training_steps=num_training_steps
+    )
 
-def generate_answer(model, tokenizer, question: str, date: str, causal_trace: str, 
-                   node_list: list, device: str = 'cuda', max_length: int = 512, 
-                   temperature: float = 0.7) -> str:
-    """Generate answer for a given question"""
-    
-    # Parse inputs
-    edge_index = parse_causal_trace(causal_trace, node_list)
-    time_value = parse_date_to_normalized_time(date)
-    
-    # Tokenize question (without answer for inference)
-    inputs = tokenizer.tokenize_qa_pair(question, None)
-    
-    # Move to device
-    input_ids = inputs['input_ids'].unsqueeze(0).to(device)
-    attention_mask = inputs['attention_mask'].unsqueeze(0).to(device)
-    time_tensor = torch.tensor([time_value], dtype=torch.float).to(device)
-    edge_index = edge_index.to(device)
-    
-    print(f"Input shapes:")
-    print(f"  input_ids: {input_ids.shape}")
-    print(f"  attention_mask: {attention_mask.shape}")
-    print(f"  time: {time_tensor.shape}")
-    print(f"  edge_index: {edge_index.shape}")
-    
-    # Generate answer
-    with torch.no_grad():
-        try:
-            generated_ids = model.generate(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                time=time_tensor,
-                edge_indices=edge_index,
-                max_length=max_length,
-                num_return_sequences=1,
-                temperature=temperature,
-                do_sample=True,
-                pad_token_id=tokenizer.tokenizer.eos_token_id,
-                eos_token_id=tokenizer.tokenizer.eos_token_id
-            )
-            
-            # Decode generated text
-            generated_text = tokenizer.decode(generated_ids[0])
-            
-            # Extract answer part
-            answer = tokenizer.extract_answer(generated_text)
-            
-            return answer.strip()
-            
-        except Exception as e:
-            print(f"Error during generation: {e}")
-            return f"Error: {str(e)}"
+def count_parameters(model) -> Tuple[int, int]:
+    """Count total and trainable parameters"""
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    return total_params, trainable_params
 
-def interactive_inference(model, tokenizer, node_list, device):
-    """Interactive inference mode"""
-    print("\n=== Interactive Inference Mode ===")
-    print("Enter 'quit' to exit")
+def save_training_plot(train_losses: List[float], eval_losses: List[float], 
+                      save_path: str = "training_plot.png"):
+    """Save training loss plot"""
+    plt.figure(figsize=(10, 6))
     
-    while True:
-        try:
-            # Get inputs
-            question = input("\nEnter question: ").strip()
-            if question.lower() == 'quit':
-                break
-                
-            date = input("Enter date (YYYY-MM-DD): ").strip()
-            if date.lower() == 'quit':
-                break
-                
-            print("Enter causal trace (format: [Node1] → [Node2] → [Node3]):")
-            causal_trace = input().strip()
-            if causal_trace.lower() == 'quit':
-                break
-            
-            print(f"\nProcessing...")
-            print(f"Question: {question}")
-            print(f"Date: {date}")
-            print(f"Causal trace: {causal_trace}")
-            
-            # Generate answer
-            answer = generate_answer(
-                model, tokenizer, question, date, causal_trace, 
-                node_list, device
-            )
-            
-            print(f"\nGenerated Answer: {answer}")
-            
-        except KeyboardInterrupt:
-            print("\nExiting...")
-            break
-        except Exception as e:
-            print(f"Error: {e}")
-            continue
+    plt.subplot(1, 2, 1)
+    plt.plot(train_losses, label='Train Loss', color='blue')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training Loss')
+    plt.legend()
+    plt.grid(True)
+    
+    plt.subplot(1, 2, 2)
+    plt.plot(eval_losses, label='Eval Loss', color='red')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Evaluation Loss')
+    plt.legend()
+    plt.grid(True)
+    
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Training plot saved to {save_path}")
 
-def batch_inference(model, tokenizer, node_list, input_file, output_file, device):
-    """Batch inference from JSON file"""
-    print(f"\n=== Batch Inference Mode ===")
-    print(f"Input: {input_file}")
-    print(f"Output: {output_file}")
+def load_json_config(config_path: str) -> Dict:
+    """Load JSON configuration file"""
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Config file not found: {config_path}")
     
-    # Load input data
-    with open(input_file, 'r') as f:
-        data = json.load(f)
+    with open(config_path, 'r') as f:
+        config = json.load(f)
     
-    results = []
-    
-    for i, item in enumerate(data):
-        print(f"\nProcessing item {i+1}/{len(data)}")
-        
-        question = item['question']
-        date = item['date']
-        causal_trace = item['causal_trace']
-        true_answer = item.get('answer', 'Unknown')
-        
-        print(f"Question: {question[:50]}...")
-        
-        # Generate answer
-        predicted_answer = generate_answer(
-            model, tokenizer, question, date, causal_trace, 
-            node_list, device
-        )
-        
-        result = {
-            'question': question,
-            'date': date,
-            'causal_trace': causal_trace,
-            'true_answer': true_answer,
-            'predicted_answer': predicted_answer
-        }
-        
-        results.append(result)
-        
-        print(f"True: {true_answer}")
-        print(f"Predicted: {predicted_answer}")
-    
-    # Save results
-    with open(output_file, 'w') as f:
-        json.dump(results, f, indent=2)
-    
-    print(f"\nResults saved to {output_file}")
+    return config
 
-def main():
-    parser = argparse.ArgumentParser(description="Run inference with DYNAMO QA model")
+def save_json_config(config: Dict, save_path: str):
+    """Save configuration to JSON file"""
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     
-    # Model arguments
-    parser.add_argument('--checkpoint', type=str, required=True,
-                        help="Path to model checkpoint")
-    parser.add_argument('--device', type=str, default='auto',
-                        help="Device to use (auto, cuda, cpu)")
+    with open(save_path, 'w') as f:
+        json.dump(config, f, indent=2)
     
-    # Inference mode
-    parser.add_argument('--mode', type=str, choices=['single', 'interactive', 'batch'],
-                        default='single', help="Inference mode")
-    
-    # Single inference arguments
-    parser.add_argument('--question', type=str,
-                        help="Question to answer (for single mode)")
-    parser.add_argument('--date', type=str,
-                        help="Date for the question (YYYY-MM-DD)")
-    parser.add_argument('--causal_trace', type=str,
-                        help="Causal trace for the question")
-    
-    # Batch inference arguments
-    parser.add_argument('--input_file', type=str,
-                        help="Input JSON file for batch inference")
-    parser.add_argument('--output_file', type=str, default='inference_results.json',
-                        help="Output file for batch inference results")
-    
-    # Generation parameters
-    parser.add_argument('--max_length', type=int, default=512,
-                        help="Maximum generation length")
-    parser.add_argument('--temperature', type=float, default=0.7,
-                        help="Generation temperature")
-    
-    args = parser.parse_args()
-    
-    # Set device
-    if args.device == 'auto':
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print(f"Config saved to {save_path}")
+
+def format_time(seconds: float) -> str:
+    """Format seconds into human readable time"""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    elif seconds < 3600:
+        minutes = seconds / 60
+        return f"{minutes:.1f}m"
     else:
-        device = args.device
+        hours = seconds / 3600
+        return f"{hours:.1f}h"
+
+def format_number(num: int) -> str:
+    """Format large numbers with commas"""
+    return f"{num:,}"
+
+def get_device(device_str: str = 'auto') -> torch.device:
+    """Get torch device"""
+    if device_str == 'auto':
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    else:
+        device = torch.device(device_str)
     
-    print(f"Using device: {device}")
+    return device
+
+def print_gpu_memory():
+    """Print GPU memory usage"""
+    if torch.cuda.is_available():
+        for i in range(torch.cuda.device_count()):
+            memory_allocated = torch.cuda.memory_allocated(i) / 1024**3
+            memory_reserved = torch.cuda.memory_reserved(i) / 1024**3
+            print(f"GPU {i}: {memory_allocated:.1f}GB allocated, {memory_reserved:.1f}GB reserved")
+    else:
+        print("CUDA not available")
+
+def calculate_accuracy(predictions: List[str], targets: List[str]) -> float:
+    """Calculate exact match accuracy"""
+    if len(predictions) != len(targets):
+        raise ValueError("Predictions and targets must have same length")
     
-    # Check checkpoint exists
-    if not os.path.exists(args.checkpoint):
-        raise FileNotFoundError(f"Checkpoint not found: {args.checkpoint}")
+    correct = 0
+    for pred, target in zip(predictions, targets):
+        if pred.strip().lower() == target.strip().lower():
+            correct += 1
     
-    # Load model
-    model, node_list, config = load_model_checkpoint(args.checkpoint, device)
+    return correct / len(predictions)
+
+def calculate_bleu_score(predictions: List[str], targets: List[str]) -> float:
+    """Calculate BLEU score (simplified version)"""
+    try:
+        from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+        
+        smoothie = SmoothingFunction().method4
+        scores = []
+        
+        for pred, target in zip(predictions, targets):
+            pred_tokens = pred.strip().split()
+            target_tokens = target.strip().split()
+            
+            if len(pred_tokens) == 0 or len(target_tokens) == 0:
+                scores.append(0.0)
+            else:
+                score = sentence_bleu([target_tokens], pred_tokens, smoothing_function=smoothie)
+                scores.append(score)
+        
+        return np.mean(scores)
+        
+    except ImportError:
+        print("NLTK not available for BLEU score calculation")
+        return 0.0
+
+def evaluate_predictions(predictions: List[str], targets: List[str]) -> Dict[str, float]:
+    """Evaluate predictions with multiple metrics"""
+    results = {
+        'accuracy': calculate_accuracy(predictions, targets),
+        'bleu_score': calculate_bleu_score(predictions, targets)
+    }
     
-    # Initialize tokenizer
-    tokenizer = DynamoTokenizer(config['transformer'])
+    return results
+
+class EarlyStopping:
+    """Early stopping utility"""
     
-    print(f"\nModel ready for inference")
-    print(f"Number of nodes: {len(node_list)}")
+    def __init__(self, patience: int = 5, min_delta: float = 0.001):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = float('inf')
+        self.early_stop = False
     
-    # Run inference based on mode
-    if args.mode == 'single':
-        if not all([args.question, args.date, args.causal_trace]):
-            raise ValueError("Single mode requires --question, --date, and --causal_trace")
+    def __call__(self, val_loss: float) -> bool:
+        if val_loss < self.best_loss - self.min_delta:
+            self.best_loss = val_loss
+            self.counter = 0
+        else:
+            self.counter += 1
         
-        print(f"\n=== Single Inference ===")
-        print(f"Question: {args.question}")
-        print(f"Date: {args.date}")
-        print(f"Causal trace: {args.causal_trace}")
+        if self.counter >= self.patience:
+            self.early_stop = True
         
-        answer = generate_answer(
-            model, tokenizer, args.question, args.date, args.causal_trace,
-            node_list, device, args.max_length, args.temperature
-        )
-        
-        print(f"\nGenerated Answer: {answer}")
-        
-    elif args.mode == 'interactive':
-        interactive_inference(model, tokenizer, node_list, device)
-        
-    elif args.mode == 'batch':
-        if not args.input_file:
-            raise ValueError("Batch mode requires --input_file")
-        if not os.path.exists(args.input_file):
-            raise FileNotFoundError(f"Input file not found: {args.input_file}")
-        
-        batch_inference(model, tokenizer, node_list, args.input_file, 
-                       args.output_file, device)
+        return self.early_stop
+
+def create_output_directory(base_dir: str, experiment_name: str = None) -> str:
+    """Create output directory with timestamp"""
+    from datetime import datetime
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    if experiment_name:
+        dir_name = f"{experiment_name}_{timestamp}"
+    else:
+        dir_name = f"experiment_{timestamp}"
+    
+    output_dir = os.path.join(base_dir, dir_name)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    return output_dir
+
+def setup_logging(log_file: str = None):
+    """Setup logging configuration"""
+    import logging
+    
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # Setup console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    
+    # Setup root logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.addHandler(console_handler)
+    
+    # Setup file handler if log_file provided
+    if log_file:
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    
+    return logger
+
+def cleanup_checkpoints(checkpoint_dir: str, keep_last: int = 3):
+    """Clean up old checkpoints, keeping only the most recent ones"""
+    if not os.path.exists(checkpoint_dir):
+        return
+    
+    # Get all checkpoint files
+    checkpoint_files = []
+    for file in os.listdir(checkpoint_dir):
+        if file.startswith('checkpoint_step_') and file.endswith('.pt'):
+            step_num = int(file.split('_')[-1].split('.')[0])
+            checkpoint_files.append((step_num, os.path.join(checkpoint_dir, file)))
+    
+    # Sort by step number
+    checkpoint_files.sort(key=lambda x: x[0])
+    
+    # Remove old checkpoints
+    if len(checkpoint_files) > keep_last:
+        for _, file_path in checkpoint_files[:-keep_last]:
+            try:
+                os.remove(file_path)
+                print(f"Removed old checkpoint: {file_path}")
+            except Exception as e:
+                print(f"Failed to remove {file_path}: {e}")
 
 if __name__ == "__main__":
-    main()
+    # Test utilities
+    print("Testing utilities...")
+    
+    # Test device detection
+    device = get_device()
+    print(f"Device: {device}")
+    
+    # Test GPU memory
+    print_gpu_memory()
+    
+    # Test number formatting
+    print(f"Formatted number: {format_number(1234567)}")
+    
+    # Test time formatting
+    print(f"Formatted time: {format_time(3661)}")
+    
+    print("All tests passed!")
