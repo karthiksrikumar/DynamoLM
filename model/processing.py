@@ -1,4 +1,4 @@
-# processing.py - Fixed version
+# processing.py - Fixed version for dynamodata.json
 import json
 import torch
 import torch.nn.functional as F
@@ -10,7 +10,80 @@ import os
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-def parse_causal_trace(trace_str: str, node_list: List[str]) -> torch.Tensor:
+def load_dynamodata_json('data/dynamodata.json': str) -> List[Dict]:
+    print(f"Loading dynamodata from {input_file}...")
+    
+    with open(input_file, 'r') as f:
+        content = f.read().strip()
+    
+    # The file contains multiple JSON arrays, so we need to parse them carefully
+    try:
+        # Try to parse as single JSON first
+        data = json.loads(content)
+        if isinstance(data, list):
+            print(f"Loaded single array with {len(data)} items")
+            return data
+        else:
+            print(f"Warning: Expected list, got {type(data)}")
+            return []
+    except json.JSONDecodeError:
+        # If single parse fails, try to split multiple JSON arrays
+        print("Single JSON parse failed, trying multiple arrays...")
+        all_data = []
+        
+        # Split by lines and look for array boundaries
+        lines = content.split('\n')
+        current_array = ""
+        bracket_count = 0
+        
+        for line in lines:
+            current_array += line + '\n'
+            bracket_count += line.count('[') - line.count(']')
+            
+            # When bracket count returns to 0, we have a complete array
+            if bracket_count == 0 and '[' in current_array:
+                try:
+                    array_data = json.loads(current_array.strip())
+                    if isinstance(array_data, list):
+                        all_data.extend(array_data)
+                        print(f"Loaded array with {len(array_data)} items")
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Could not parse array: {e}")
+                
+                current_array = ""
+        
+        print(f"Total loaded: {len(all_data)} items from multiple arrays")
+        return all_data
+
+def validate_data_sample(sample: Dict, index: int = 0) -> bool:
+    """Validate that a data sample has the required structure"""
+    required_keys = ['question', 'date', 'answer', 'causal_trace']
+    
+    for key in required_keys:
+        if key not in sample:
+            print(f"Sample {index}: Missing required key '{key}'")
+            return False
+        
+        if not isinstance(sample[key], str) or not sample[key].strip():
+            print(f"Sample {index}: Key '{key}' is empty or not a string")
+            return False
+    
+    # Validate date format
+    try:
+        year, month, day = map(int, sample['date'].split('-'))
+        if year < 1900 or year > 2030 or month < 1 or month > 12 or day < 1 or day > 31:
+            print(f"Sample {index}: Invalid date format '{sample['date']}'")
+            return False
+    except:
+        print(f"Sample {index}: Could not parse date '{sample['date']}'")
+        return False
+    
+    # Validate causal trace format (should contain brackets)
+    if '[' not in sample['causal_trace'] or ']' not in sample['causal_trace']:
+        print(f"Sample {index}: Causal trace doesn't contain proper format: '{sample['causal_trace'][:50]}...'")
+        return False
+    
+    return True
     """Parse causal trace string into edge index tensor"""
     pattern = r'\[([^\]]+)\]'
     node_sequence = re.findall(pattern, trace_str)
