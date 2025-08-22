@@ -8,7 +8,6 @@ def load_dynamodata_json(input_file: str = "data/dynamodata.json") -> List[Dict]
     
     with open(input_file, 'r') as f:
         content = f.read().strip()
-    
     try:
         data = json.loads(content)
         if isinstance(data, list):
