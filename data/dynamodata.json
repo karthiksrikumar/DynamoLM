@@ -1,274 +1,273 @@
-[
-    {
-      "question": "What was the peak sustained wind speed of Hurricane Felix at landfall in Florida?",
-      "date": "2025-09-10",
-      "answer": "145 mph",
-      "causal_trace": "[NHC Landfall Advisory] → [Category 4 Classification] → [Peak Wind Measurement Protocol] → [Advisory #24 (2025-09-08)] → [Data: 145 mph]"
-    },
-    {
-      "question": "Which company acquired TikTok after the 2025 US data privacy legislation?",
-      "date": "2026-01-15",
-      "answer": "Oracle",
-      "causal_trace": "[DATA Act Enforcement] → [TikTok Divestment Requirement] → [Oracle Acquisition Bid] → [CFIUS Approval] → [Deal Closure (2026-01-12)]"
-    },
-    {
-      "question": "How many member states ratified the WHO Pandemic Treaty by the implementation deadline?",
-      "date": "2025-05-31",
-      "answer": "137",
-      "causal_trace": "[Treaty Deadline: 2025-05-30] → [Member State Ratification Tracking] → [WHO Secretariat Tally] → [Final Count: 137] → [Press Release (2025-05-28)]"
-    },
-    {
-      "question": "What was the final altitude record for SolarStratos' sun-powered aircraft?",
-      "date": "2025-11-20",
-      "answer": "90,000 feet",
-      "causal_trace": "[Stratospheric Test Flight] → [Telemetry Data Collection] → [Record Validation] → [Official Announcement (2025-11-18)] → [Altitude: 90,000 ft]"
-    },
-    {
-      "question": "Did SpaceX's Starship achieve Mars orbital insertion in 2025?",
-      "date": "2026-02-01",
-      "answer": "Yes",
-      "causal_trace": "[Starship SN-25 Launch] → [Trans-Mars Injection] → [Orbital Insertion Burn] → [NASA Deep Space Network Confirmation] → [Mission Success Notification]"
-    },
-    {
-      "question": "What percentage of Singapore's water supply came from desalination in 2025?",
-      "date": "2026-03-10",
-      "answer": "65%",
-      "causal_trace": "[Tuas Mega-Plant Operation] → [Annual Water Production Data] → [PUB Statistical Analysis] → [2025 Water Report] → [Desalination Contribution: 65%]"
-    },
-    {
-      "question": "Who won the 2025 Women's World Cup final?",
-      "date": "2025-08-25",
-      "answer": "Spain",
-      "causal_trace": "[Tournament Final Match] → [Match Result: Spain 3-1 Canada] → [FIFA Match Report] → [Trophy Presentation] → [Official FIFA Archives]"
-    },
-    {
-      "question": "What carbon price did Canada implement under the 2025 Climate Accountability Act?",
-      "date": "2025-07-01",
-      "answer": "$170 per tonne",
-      "causal_trace": "[Act Legislative Process] → [Royal Assent] → [Carbon Pricing Schedule] → [Regulation Text] → [Effective Rate: $170/tonne]"
-    },
-    {
-      "question": "Which volcano eruption disrupted trans-Pacific flights in April 2026?",
-      "date": "2026-04-15",
-      "answer": "Mount Sakurajima",
-      "causal_trace": "[Volcanic Eruption Detection] → [Ash Cloud Modeling] → [Flight Cancellation Notices] → [JMA Volcanic Alert] → [Event Attribution: Sakurajima]"
-    },
-    {
-      "question": "What was the initial production capacity of Tesla's Nevada lithium refinery?",
-      "date": "2025-10-05",
-      "answer": "50,000 metric tons/year",
-      "causal_trace": "[Facility Commissioning] → [Design Specifications] → [Operational Capacity Testing] → [Press Release (2025-10-01)] → [Stated Output: 50k MT/yr]"
-    },
-    {
-      "question": "How many countries participated in RIMPAC 2025?",
-      "date": "2025-08-10",
-      "answer": "32",
-      "causal_trace": "[Participant Registration] → [US Pacific Fleet Roster] → [Exercise After-Action Report] → [Final Participant List] → [Country Count: 32]"
-    },
-    {
-      "question": "What was the casualty count in the Mumbai monorail collision?",
-      "date": "2025-09-05",
-      "answer": "47",
-      "causal_trace": "[Accident Investigation] → [Rescue Operation Records] → [Morgue/Medical Reports] → [Official Death Toll Announcement] → [Final Figure: 47]"
-    },
-    {
-      "question": "Which country's central bank launched the first CBDC for tourist payments?",
-      "date": "2025-12-01",
-      "answer": "Thailand",
-      "causal_trace": "[Tourism-Specific CBDC Development] → [Pilot Testing] → [Central Bank Announcement] → [e-Baht Launch (2025-12-01)] → [BOT Policy Documentation]"
-    },
-    {
-      "question": "What was the attendance at COP30 in Belém, Brazil?",
-      "date": "2025-11-15",
-      "answer": "45,000",
-      "causal_trace": "[Registration System Data] → [UNFCCC Attendance Verification] → [Post-Event Summary] → [COP30 Final Report] → [Attendee Count: 45,000]"
-    },
-    {
-      "question": "Did the US Congress pass the CHIPS Act extension in 2025?",
-      "date": "2025-07-30",
-      "answer": "Yes",
-      "causal_trace": "[House/Senate Voting Records] → [Bill Passage Confirmation] → [Presidential Signing] → [Public Law Number] → [Federal Register Publication]"
-    },
-    {
-      "question": "What was the peak global concurrent viewership for the 2025 League of Legends World Championship?",
-      "date": "2025-11-10",
-      "answer": "8.7 million",
-      "causal_trace": "[Streaming Platform Analytics] → [Peak Concurrent Viewership Metric] → [Riot Games Data Aggregation] → [Post-Event Report] → [Record: 8.7M]"
-    },
-    {
-      "question": "How many satellites did OneWeb deploy in its 2025 constellation expansion?",
-      "date": "2026-01-20",
-      "answer": "648",
-      "causal_trace": "[Launch Campaign Completion] → [Satellite Deployment Records] → [Constellation Status Update] → [OneWeb Press Release (2026-01-18)] → [New Satellites: 648]"
-    },
-    {
-      "question": "What was the final score in the 2025 Rugby World Cup final?",
-      "date": "2025-10-25",
-      "answer": "South Africa 24-19 New Zealand",
-      "causal_trace": "[Match Official Scorecard] → [World Rugby Validation] → [Tournament Records] → [Final Match Report] → [Score: RSA 24-19 NZL]"
-    },
-    {
-      "question": "Which city recorded the highest temperature during the 2025 European heatwave?",
-      "date": "2025-07-20",
-      "answer": "Seville, Spain (48.7°C)",
-      "causal_trace": "[Weather Station Network Data] → [Extreme Temperature Verification] → [EMRD Climate Bulletin] → [Heatwave Analysis Report] → [Record: Seville 48.7°C]"
-    },
-    {
-      "question": "How many patents did Huawei file in 2025 under the WIPO's PCT system?",
-      "date": "2026-03-05",
-      "answer": "8,542",
-      "causal_trace": "[PCT Application Database] → [Annual Filing Statistics] → [WIPO Corporate Rankings] → [2025 Patent Report] → [Huawei Total: 8,542]"
-    },
-    {
-      "question": "What was the inflation rate in Zimbabwe after its 2025 currency reform?",
-      "date": "2026-02-01",
-      "answer": "12.3%",
-      "causal_trace": "[Currency Reform Implementation] → [Monthly Inflation Tracking] → [Central Bank Calculation] → [January 2026 Report] → [Inflation Rate: 12.3%]"
-    },
-    {
-      "question": "Which aircraft model received FAA certification for hydrogen propulsion in 2025?",
-      "date": "2025-12-10",
-      "answer": "ZeroAvia ZA2000",
-      "causal_trace": "[Certification Testing Completion] → [FAA Type Certificate Issuance] → [Manufacturer Announcement] → [Certificate Number] → [FAA Registry Entry]"
-    },
-    {
-      "question": "How many hectares burned in Australia's 2025-26 bushfire season?",
-      "date": "2026-03-15",
-      "answer": "38 million",
-      "causal_trace": "[Satellite Burn Scar Analysis] → [State Fire Agency Reports] → [National Aggregation] → [Bushfire Report (2026-03-13)] → [Total Area: 38M ha]"
-    },
-    {
-      "question": "What was the verdict in the 2025 EU vs. Meta antitrust case?",
-      "date": "2025-10-15",
-      "answer": "€3.9 billion fine",
-      "causal_trace": "[ECJ Ruling Publication] → [Judgment Summary] → [Sanction Amount Confirmation] → [Case EC-2023/4789] → [Fine: €3.9B]"
-    },
-    {
-      "question": "How deep did China's Jiaolong submersible dive in the Mariana Trench?",
-      "date": "2026-01-25",
-      "answer": "11,234 meters",
-      "causal_trace": "[Dive Mission Telemetry] → [Depth Sensor Validation] → [Chinese Academy Report] → [State Media Announcement] → [Recorded Depth: 11,234m]"
-    },
-    {
-      "question": "What was the final approval margin for Kenya's 2025 constitution referendum?",
-      "date": "2025-06-15",
-      "answer": "68.4%",
-      "causal_trace": "[Ballot Counting Process] → [Electoral Commission Tally] → [Result Certification] → [Official Announcement] → [Yes Vote: 68.4%]"
-    },
-    {
-      "question": "Which country won the 2025 Davis Cup?",
-      "date": "2025-11-30",
-      "answer": "Italy",
-      "causal_trace": "[Final Match Results] → [Tournament Scoring System] → [ITF Verification] → [Champion Declaration] → [Winner: Italy]"
-    },
-    {
-      "question": "How many Starlink Gen2 satellites were operational by December 2025?",
-      "date": "2026-01-05",
-      "answer": "12,840",
-      "causal_trace": "[Constellation Deployment Logs] → [FCC Operational Status Report] → [SpaceX Disclosure] → [January 2026 Filing] → [Operational Sats: 12,840]"
-    },
-    {
-      "question": "What was the casualty count in the 2025 Dhaka garment factory collapse?",
-      "date": "2025-04-20",
-      "answer": "213",
-      "causal_trace": "[Rescue Operation Closure] → [Fatality Reconciliation] → [Government Investigation Report] → [Final Death Toll] → [Number: 213]"
-    },
-    {
-      "question": "Which automaker delivered the most electric vehicles globally in Q4 2025?",
-      "date": "2026-01-20",
-      "answer": "BYD",
-      "causal_trace": "[Global EV Delivery Reports] → [Manufacturer Data Aggregation] → [Counterpoint Analysis] → [Q4 2025 Ranking] → [Leader: BYD (526K units)]"
-    }
-    {
-      "question": "What was the final cost of the California High-Speed Rail's initial operating segment?",
-      "date": "2025-11-01",
-      "answer": "$28.5 billion",
-      "causal_trace": "[Project Financial Audit] → [Final Cost Reconciliation] → [CA State Legislature Report] → [Public Disclosure (2025-10-28)] → [Total: $28.5B]"
-    },
-    {
-      "question": "Which element was officially added to the periodic table in 2025?",
-      "date": "2025-12-15",
-      "answer": "Tennessine-294",
-      "causal_trace": "[IUPAC/IUPAP Joint Working Group Confirmation] → [Discovery Validation] → [Official Naming] → [Periodic Table Update] → [Element 117: Tennessine]"
-    },
-    {
-      "question": "What was the peak power output of the ITER reactor's first sustained plasma run?",
-      "date": "2025-06-10",
-      "answer": "700 megawatts",
-      "causal_trace": "[Experiment #TR-25-014] → [Neutron Power Measurement] → [Data Validation Committee] → [ITER Council Announcement] → [Peak Output: 700 MW]"
-    },
-    {
-      "question": "Who won the 2025 Nobel Prize in Literature?",
-      "date": "2025-10-09",
-      "answer": "Salman Rushdie",
-      "causal_trace": "[Swedish Academy Deliberation] → [Voting Result] → [Official Citation] → [Announcement Ceremony] → [Laureate: Salman Rushdie]"
-    },
-    {
-      "question": "How many users did Threads surpass one year after its EU launch?",
-      "date": "2025-12-15",
-      "answer": "250 million",
-      "causal_trace": "[Meta Q4 2025 Earnings Report] → [Platform Metrics Disclosure] → [Internal Data Verification] → [Investor Call] → [Threads MAUs: 250M]"
-    },
-    {
-      "question": "What was the casualty count from the 2025 eruption of Mount Nyiragongo?",
-      "date": "2025-05-05",
-      "answer": "152",
-      "causal_trace": "[Goma Evacuation Review] → [Satellite Damage Assessment] → [DRC Government Tally] → [UN Situation Report] → [Confirmed Fatalities: 152]"
-    },
-    {
-      "question": "Which pharmaceutical company received first approval for an Alzheimer's vaccine?",
-      "date": "2026-02-14",
-      "answer": "Eisai",
-      "causal_trace": "[Phase III Clinical Trial Results] → [FDA Advisory Panel Recommendation] → [Biologics License Approval] → [Press Release] → [Company: Eisai]"
-    },
-    {
-      "question": "What was the final ruling in the US Supreme Court case 'NetChoice v. Paxton'?",
-      "date": "2025-06-23",
-      "answer": "5-4 in favor of NetChoice",
-      "causal_trace": "[Oral Arguments] → [Justice Deliberation] → [Opinion Drafting] → [Decision Publication (No. 24-145)] → [Ruling: 5-4 for Petitioner]"
-    },
-    {
-      "question": "How many exoplanets did the James Webb Space Telescope confirm in its first deep field survey?",
-      "date": "2025-04-12",
-      "answer": "1,247",
-      "causal_trace": "[COSMOS-Web Survey Data] → [Transit Photometry Analysis] → [Statistical Validation] → [NASA Astrophysics Division Report] → [Exoplanet Count: 1,247]"
-    },
-    {
-      "question": "What was the attendance for the 2025 World Expo in Osaka?",
-      "date": "2025-04-15",
-      "answer": "28.3 million",
-      "causal_trace": "[Gate Turnstile Data Aggregation] → [BIE Audit] → [Final Attendance Report] → [Closing Ceremony Announcement] → [Total: 28.3M visitors]"
-    },
-    {
-      "question": "Which country defaulted on its sovereign debt in October 2025?",
-      "date": "2025-10-30",
-      "answer": "Pakistan",
-      "causal_trace": "[IMF Bailout Negotiation Collapse] → [Bond Coupon Non-Payment] → [Rating Agency Downgrade (D)] → [ISDA Credit Event Determination] → [Defaulting Nation: Pakistan]"
-    },
-    {
-      "question": "What was the final box office gross of 'Avatar 3'?",
-      "date": "2025-03-01",
-      "answer": "$2.3 billion",
-      "causal_trace": "[Theatrical Run Conclusion] → [Studio Financial Reporting] → [Box Office Mojo Aggregation] → [Disney Earnings Statement] → [Worldwide Gross: $2.3B]"
-    },
-    {
-      "question": "How many species were declared extinct in the 2025 IUCN Red List update?",
-      "date": "2025-07-10",
-      "answer": "32",
-      "causal_trace": "[Species Survival Commission Assessment] → [Extinction Verification Panel] → [IUCN Congress Vote] → [Red List Publication] → [New Extinctions: 32 species]"
-    },
-    {
-      "question": "What was the winning bid for the first federal offshore wind lease in the Gulf of Mexico?",
-      "date": "2025-08-22",
-      "answer": "$245 million",
-      "causal_trace": "[BOEM Lease Auction #GOM-01] → [Bid Opening Procedure] → [High Bid Validation] → [Department of Interior Announcement] → [Winning Bid: $245M]"
-    },
-    {
-      "question": "Did the UN Security Council pass a resolution on the 2025 Ethiopia-Sudan border conflict?",
-      "date": "2025-09-18",
-      "answer": "No (vetoed by Russia)",
-      "causal_trace": "[Draft Resolution S/2025/789] → [Security Council Voting] → [Permanent Member Veto] → [Official Voting Record] → [Result: Failed (13-1-1)]"
-    },
+{
+    "question": "What was the peak sustained wind speed of Hurricane Felix at landfall in Florida?",
+    "date": "2025-09-10",
+    "answer": "145 mph",
+    "causal_trace": "[NHC Landfall Advisory] → [Category 4 Classification] → [Peak Wind Measurement Protocol] → [Advisory #24 (2025-09-08)] → [Data: 145 mph]"
+  },
+  {
+    "question": "Which company acquired TikTok after the 2025 US data privacy legislation?",
+    "date": "2026-01-15",
+    "answer": "Oracle",
+    "causal_trace": "[DATA Act Enforcement] → [TikTok Divestment Requirement] → [Oracle Acquisition Bid] → [CFIUS Approval] → [Deal Closure (2026-01-12)]"
+  },
+  {
+    "question": "How many member states ratified the WHO Pandemic Treaty by the implementation deadline?",
+    "date": "2025-05-31",
+    "answer": "137",
+    "causal_trace": "[Treaty Deadline: 2025-05-30] → [Member State Ratification Tracking] → [WHO Secretariat Tally] → [Final Count: 137] → [Press Release (2025-05-28)]"
+  },
+  {
+    "question": "What was the final altitude record for SolarStratos' sun-powered aircraft?",
+    "date": "2025-11-20",
+    "answer": "90,000 feet",
+    "causal_trace": "[Stratospheric Test Flight] → [Telemetry Data Collection] → [Record Validation] → [Official Announcement (2025-11-18)] → [Altitude: 90,000 ft]"
+  },
+  {
+    "question": "Did SpaceX's Starship achieve Mars orbital insertion in 2025?",
+    "date": "2026-02-01",
+    "answer": "Yes",
+    "causal_trace": "[Starship SN-25 Launch] → [Trans-Mars Injection] → [Orbital Insertion Burn] → [NASA Deep Space Network Confirmation] → [Mission Success Notification]"
+  },
+  {
+    "question": "What percentage of Singapore's water supply came from desalination in 2025?",
+    "date": "2026-03-10",
+    "answer": "65%",
+    "causal_trace": "[Tuas Mega-Plant Operation] → [Annual Water Production Data] → [PUB Statistical Analysis] → [2025 Water Report] → [Desalination Contribution: 65%]"
+  },
+  {
+    "question": "Who won the 2025 Women's World Cup final?",
+    "date": "2025-08-25",
+    "answer": "Spain",
+    "causal_trace": "[Tournament Final Match] → [Match Result: Spain 3-1 Canada] → [FIFA Match Report] → [Trophy Presentation] → [Official FIFA Archives]"
+  },
+  {
+    "question": "What carbon price did Canada implement under the 2025 Climate Accountability Act?",
+    "date": "2025-07-01",
+    "answer": "$170 per tonne",
+    "causal_trace": "[Act Legislative Process] → [Royal Assent] → [Carbon Pricing Schedule] → [Regulation Text] → [Effective Rate: $170/tonne]"
+  },
+  {
+    "question": "Which volcano eruption disrupted trans-Pacific flights in April 2026?",
+    "date": "2026-04-15",
+    "answer": "Mount Sakurajima",
+    "causal_trace": "[Volcanic Eruption Detection] → [Ash Cloud Modeling] → [Flight Cancellation Notices] → [JMA Volcanic Alert] → [Event Attribution: Sakurajima]"
+  },
+  {
+    "question": "What was the initial production capacity of Tesla's Nevada lithium refinery?",
+    "date": "2025-10-05",
+    "answer": "50,000 metric tons/year",
+    "causal_trace": "[Facility Commissioning] → [Design Specifications] → [Operational Capacity Testing] → [Press Release (2025-10-01)] → [Stated Output: 50k MT/yr]"
+  },
+  {
+    "question": "How many countries participated in RIMPAC 2025?",
+    "date": "2025-08-10",
+    "answer": "32",
+    "causal_trace": "[Participant Registration] → [US Pacific Fleet Roster] → [Exercise After-Action Report] → [Final Participant List] → [Country Count: 32]"
+  },
+  {
+    "question": "What was the casualty count in the Mumbai monorail collision?",
+    "date": "2025-09-05",
+    "answer": "47",
+    "causal_trace": "[Accident Investigation] → [Rescue Operation Records] → [Morgue/Medical Reports] → [Official Death Toll Announcement] → [Final Figure: 47]"
+  },
+  {
+    "question": "Which country's central bank launched the first CBDC for tourist payments?",
+    "date": "2025-12-01",
+    "answer": "Thailand",
+    "causal_trace": "[Tourism-Specific CBDC Development] → [Pilot Testing] → [Central Bank Announcement] → [e-Baht Launch (2025-12-01)] → [BOT Policy Documentation]"
+  },
+  {
+    "question": "What was the attendance at COP30 in Belém, Brazil?",
+    "date": "2025-11-15",
+    "answer": "45,000",
+    "causal_trace": "[Registration System Data] → [UNFCCC Attendance Verification] → [Post-Event Summary] → [COP30 Final Report] → [Attendee Count: 45,000]"
+  },
+  {
+    "question": "Did the US Congress pass the CHIPS Act extension in 2025?",
+    "date": "2025-07-30",
+    "answer": "Yes",
+    "causal_trace": "[House/Senate Voting Records] → [Bill Passage Confirmation] → [Presidential Signing] → [Public Law Number] → [Federal Register Publication]"
+  },
+  {
+    "question": "What was the peak global concurrent viewership for the 2025 League of Legends World Championship?",
+    "date": "2025-11-10",
+    "answer": "8.7 million",
+    "causal_trace": "[Streaming Platform Analytics] → [Peak Concurrent Viewership Metric] → [Riot Games Data Aggregation] → [Post-Event Report] → [Record: 8.7M]"
+  },
+  {
+    "question": "How many satellites did OneWeb deploy in its 2025 constellation expansion?",
+    "date": "2026-01-20",
+    "answer": "648",
+    "causal_trace": "[Launch Campaign Completion] → [Satellite Deployment Records] → [Constellation Status Update] → [OneWeb Press Release (2026-01-18)] → [New Satellites: 648]"
+  },
+  {
+    "question": "What was the final score in the 2025 Rugby World Cup final?",
+    "date": "2025-10-25",
+    "answer": "South Africa 24-19 New Zealand",
+    "causal_trace": "[Match Official Scorecard] → [World Rugby Validation] → [Tournament Records] → [Final Match Report] → [Score: RSA 24-19 NZL]"
+  },
+  {
+    "question": "Which city recorded the highest temperature during the 2025 European heatwave?",
+    "date": "2025-07-20",
+    "answer": "Seville, Spain (48.7°C)",
+    "causal_trace": "[Weather Station Network Data] → [Extreme Temperature Verification] → [EMRD Climate Bulletin] → [Heatwave Analysis Report] → [Record: Seville 48.7°C]"
+  },
+  {
+    "question": "How many patents did Huawei file in 2025 under the WIPO's PCT system?",
+    "date": "2026-03-05",
+    "answer": "8,542",
+    "causal_trace": "[PCT Application Database] → [Annual Filing Statistics] → [WIPO Corporate Rankings] → [2025 Patent Report] → [Huawei Total: 8,542]"
+  },
+  {
+    "question": "What was the inflation rate in Zimbabwe after its 2025 currency reform?",
+    "date": "2026-02-01",
+    "answer": "12.3%",
+    "causal_trace": "[Currency Reform Implementation] → [Monthly Inflation Tracking] → [Central Bank Calculation] → [January 2026 Report] → [Inflation Rate: 12.3%]"
+  },
+  {
+    "question": "Which aircraft model received FAA certification for hydrogen propulsion in 2025?",
+    "date": "2025-12-10",
+    "answer": "ZeroAvia ZA2000",
+    "causal_trace": "[Certification Testing Completion] → [FAA Type Certificate Issuance] → [Manufacturer Announcement] → [Certificate Number] → [FAA Registry Entry]"
+  },
+  {
+    "question": "How many hectares burned in Australia's 2025-26 bushfire season?",
+    "date": "2026-03-15",
+    "answer": "38 million",
+    "causal_trace": "[Satellite Burn Scar Analysis] → [State Fire Agency Reports] → [National Aggregation] → [Bushfire Report (2026-03-13)] → [Total Area: 38M ha]"
+  },
+  {
+    "question": "What was the verdict in the 2025 EU vs. Meta antitrust case?",
+    "date": "2025-10-15",
+    "answer": "€3.9 billion fine",
+    "causal_trace": "[ECJ Ruling Publication] → [Judgment Summary] → [Sanction Amount Confirmation] → [Case EC-2023/4789] → [Fine: €3.9B]"
+  },
+  {
+    "question": "How deep did China's Jiaolong submersible dive in the Mariana Trench?",
+    "date": "2026-01-25",
+    "answer": "11,234 meters",
+    "causal_trace": "[Dive Mission Telemetry] → [Depth Sensor Validation] → [Chinese Academy Report] → [State Media Announcement] → [Recorded Depth: 11,234m]"
+  },
+  {
+    "question": "What was the final approval margin for Kenya's 2025 constitution referendum?",
+    "date": "2025-06-15",
+    "answer": "68.4%",
+    "causal_trace": "[Ballot Counting Process] → [Electoral Commission Tally] → [Result Certification] → [Official Announcement] → [Yes Vote: 68.4%]"
+  },
+  {
+    "question": "Which country won the 2025 Davis Cup?",
+    "date": "2025-11-30",
+    "answer": "Italy",
+    "causal_trace": "[Final Match Results] → [Tournament Scoring System] → [ITF Verification] → [Champion Declaration] → [Winner: Italy]"
+  },
+  {
+    "question": "How many Starlink Gen2 satellites were operational by December 2025?",
+    "date": "2026-01-05",
+    "answer": "12,840",
+    "causal_trace": "[Constellation Deployment Logs] → [FCC Operational Status Report] → [SpaceX Disclosure] → [January 2026 Filing] → [Operational Sats: 12,840]"
+  },
+  {
+    "question": "What was the casualty count in the 2025 Dhaka garment factory collapse?",
+    "date": "2025-04-20",
+    "answer": "213",
+    "causal_trace": "[Rescue Operation Closure] → [Fatality Reconciliation] → [Government Investigation Report] → [Final Death Toll] → [Number: 213]"
+  },
+  {
+    "question": "Which automaker delivered the most electric vehicles globally in Q4 2025?",
+    "date": "2026-01-20",
+    "answer": "BYD",
+    "causal_trace": "[Global EV Delivery Reports] → [Manufacturer Data Aggregation] → [Counterpoint Analysis] → [Q4 2025 Ranking] → [Leader: BYD (526K units)]"
+  },
+  {
+    "question": "What was the final cost of the California High-Speed Rail's initial operating segment?",
+    "date": "2025-11-01",
+    "answer": "$28.5 billion",
+    "causal_trace": "[Project Financial Audit] → [Final Cost Reconciliation] → [CA State Legislature Report] → [Public Disclosure (2025-10-28)] → [Total: $28.5B]"
+  },
+  {
+    "question": "Which element was officially added to the periodic table in 2025?",
+    "date": "2025-12-15",
+    "answer": "Tennessine-294",
+    "causal_trace": "[IUPAC/IUPAP Joint Working Group Confirmation] → [Discovery Validation] → [Official Naming] → [Periodic Table Update] → [Element 117: Tennessine]"
+  },
+  {
+    "question": "What was the peak power output of the ITER reactor's first sustained plasma run?",
+    "date": "2025-06-10",
+    "answer": "700 megawatts",
+    "causal_trace": "[Experiment #TR-25-014] → [Neutron Power Measurement] → [Data Validation Committee] → [ITER Council Announcement] → [Peak Output: 700 MW]"
+  },
+  {
+    "question": "Who won the 2025 Nobel Prize in Literature?",
+    "date": "2025-10-09",
+    "answer": "Salman Rushdie",
+    "causal_trace": "[Swedish Academy Deliberation] → [Voting Result] → [Official Citation] → [Announcement Ceremony] → [Laureate: Salman Rushdie]"
+  },
+  {
+    "question": "How many users did Threads surpass one year after its EU launch?",
+    "date": "2025-12-15",
+    "answer": "250 million",
+    "causal_trace": "[Meta Q4 2025 Earnings Report] → [Platform Metrics Disclosure] → [Internal Data Verification] → [Investor Call] → [Threads MAUs: 250M]"
+  },
+  {
+    "question": "What was the casualty count from the 2025 eruption of Mount Nyiragongo?",
+    "date": "2025-05-05",
+    "answer": "152",
+    "causal_trace": "[Goma Evacuation Review] → [Satellite Damage Assessment] → [DRC Government Tally] → [UN Situation Report] → [Confirmed Fatalities: 152]"
+  },
+  {
+    "question": "Which pharmaceutical company received first approval for an Alzheimer's vaccine?",
+    "date": "2026-02-14",
+    "answer": "Eisai",
+    "causal_trace": "[Phase III Clinical Trial Results] → [FDA Advisory Panel Recommendation] → [Biologics License Approval] → [Press Release] → [Company: Eisai]"
+  },
+  {
+    "question": "What was the final ruling in the US Supreme Court case 'NetChoice v. Paxton'?",
+    "date": "2025-06-23",
+    "answer": "5-4 in favor of NetChoice",
+    "causal_trace": "[Oral Arguments] → [Justice Deliberation] → [Opinion Drafting] → [Decision Publication (No. 24-145)] → [Ruling: 5-4 for Petitioner]"
+  },
+  {
+    "question": "How many exoplanets did the James Webb Space Telescope confirm in its first deep field survey?",
+    "date": "2025-04-12",
+    "answer": "1,247",
+    "causal_trace": "[COSMOS-Web Survey Data] → [Transit Photometry Analysis] → [Statistical Validation] → [NASA Astrophysics Division Report] → [Exoplanet Count: 1,247]"
+  },
+  {
+    "question": "What was the attendance for the 2025 World Expo in Osaka?",
+    "date": "2025-04-15",
+    "answer": "28.3 million",
+    "causal_trace": "[Gate Turnstile Data Aggregation] → [BIE Audit] → [Final Attendance Report] → [Closing Ceremony Announcement] → [Total: 28.3M visitors]"
+  },
+  {
+    "question": "Which country defaulted on its sovereign debt in October 2025?",
+    "date": "2025-10-30",
+    "answer": "Pakistan",
+    "causal_trace": "[IMF Bailout Negotiation Collapse] → [Bond Coupon Non-Payment] → [Rating Agency Downgrade (D)] → [ISDA Credit Event Determination] → [Defaulting Nation: Pakistan]"
+  },
+  {
+    "question": "What was the final box office gross of 'Avatar 3'?",
+    "date": "2025-03-01",
+    "answer": "$2.3 billion",
+    "causal_trace": "[Theatrical Run Conclusion] → [Studio Financial Reporting] → [Box Office Mojo Aggregation] → [Disney Earnings Statement] → [Worldwide Gross: $2.3B]"
+  },
+  {
+    "question": "How many species were declared extinct in the 2025 IUCN Red List update?",
+    "date": "2025-07-10",
+    "answer": "32",
+    "causal_trace": "[Species Survival Commission Assessment] → [Extinction Verification Panel] → [IUCN Congress Vote] → [Red List Publication] → [New Extinctions: 32 species]"
+  },
+  {
+    "question": "What was the winning bid for the first federal offshore wind lease in the Gulf of Mexico?",
+    "date": "2025-08-22",
+    "answer": "$245 million",
+    "causal_trace": "[BOEM Lease Auction #GOM-01] → [Bid Opening Procedure] → [High Bid Validation] → [Department of Interior Announcement] → [Winning Bid: $245M]"
+  },
+  {
+    "question": "Did the UN Security Council pass a resolution on the 2025 Ethiopia-Sudan border conflict?",
+    "date": "2025-09-18",
+    "answer": "No (vetoed by Russia)",
+    "causal_trace": "[Draft Resolution S/2025/789] → [Security Council Voting] → [Permanent Member Veto] → [Official Voting Record] → [Result: Failed (13-1-1)]"
+  },
     {
       "question": "What was the maximum safe duration for the first civilian spacewalk on a Polaris mission?",
       "date": "2025-11-05",
@@ -359,4 +358,5 @@
       "answer": "Labour: 412 seats, Conservatives: 198 seats",
       "causal_trace": "[Constituency Results Declaration] → [Electoral Commission Certification] → [Final Seat Tally] → [Official Result] → [Seats: Lab 412, Con 198]"
     }
+]
 
