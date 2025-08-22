@@ -179,9 +179,6 @@
       "answer": "BYD",
       "causal_trace": "[Global EV Delivery Reports] → [Manufacturer Data Aggregation] → [Counterpoint Analysis] → [Q4 2025 Ranking] → [Leader: BYD (526K units)]"
     }
-  ]
-
-[
     {
       "question": "What was the final cost of the California High-Speed Rail's initial operating segment?",
       "date": "2025-11-01",
@@ -362,4 +359,4 @@
       "answer": "Labour: 412 seats, Conservatives: 198 seats",
       "causal_trace": "[Constituency Results Declaration] → [Electoral Commission Certification] → [Final Seat Tally] → [Official Result] → [Seats: Lab 412, Con 198]"
     }
-]
+
