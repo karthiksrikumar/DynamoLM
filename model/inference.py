@@ -2,7 +2,7 @@
 import torch
 from model import create_dynamo_model
 from tokenizer_utils import DynamoTokenizer
-from processing import parse_causal_trace, parse_date_to_normalized_time
+from processing import parse_causal_trace
 import argparse
 import json
 import os
@@ -40,7 +40,16 @@ def generate_answer(model, tokenizer, question: str, date: str, causal_trace: st
     
     # Parse inputs
     edge_index = parse_causal_trace(causal_trace, node_list)
-    time_value = parse_date_to_normalized_time(date)
+    # Use the same time parsing function as training
+    def parse_date_to_time(date_str: str) -> float:
+        """Convert date to normalized time (same as fullpipeline.py)"""
+        try:
+            year, month, day = map(int, date_str.split('-'))
+            return year + (month - 1) / 12 + (day - 1) / 365
+        except:
+            return 2025.0  # Default fallback
+    
+    time_value = parse_date_to_time(date)
     
     # Tokenize question (without answer for inference)
     inputs = tokenizer.tokenize_qa_pair(question, None)

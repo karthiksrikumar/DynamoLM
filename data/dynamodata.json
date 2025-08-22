@@ -1,4 +1,5 @@
-{
+[
+  {
     "question": "What was the peak sustained wind speed of Hurricane Felix at landfall in Florida?",
     "date": "2025-09-10",
     "answer": "145 mph",
@@ -268,95 +269,94 @@
     "answer": "No (vetoed by Russia)",
     "causal_trace": "[Draft Resolution S/2025/789] → [Security Council Voting] → [Permanent Member Veto] → [Official Voting Record] → [Result: Failed (13-1-1)]"
   },
-    {
-      "question": "What was the maximum safe duration for the first civilian spacewalk on a Polaris mission?",
-      "date": "2025-11-05",
-      "answer": "90 minutes",
-      "causal_trace": "[EVA Suit Performance Testing] → [Life Support System Limits] → [Mission Control Protocol] → [Polaris Mission Spec Sheet] → [Max EVA: 90 min]"
-    },
-    {
-      "question": "Which city was awarded the 2032 Summer Olympics?",
-      "date": "2025-07-21",
-      "answer": "Istanbul",
-      "causal_trace": "[IOC Evaluation Commission Report] → [Host City Election Session] → [Member Voting] → [Announcement Ceremony] → [Winner: Istanbul, Turkey]"
-    },
-    {
-      "question": "What was the final score of the first official NFL game held in Madrid?",
-      "date": "2025-10-05",
-      "answer": "Kansas City Chiefs 31 - Chicago Bears 17",
-      "causal_trace": "[Game Official Statistics] → [NFL Game Center Data] → [Play-by-Play Verification] → [Final Scoreboard] → [Result: KC 31 - CHI 17]"
-    },
-    {
-      "question": "How many frames per second did Sony's PlayStation 6 Pro target for 8K gaming?",
-      "date": "2026-03-23",
-      "answer": "120 fps",
-      "causal_trace": "[Hardware Specifications Finalization] → [Developer SDK Documentation] → [Tech Press Briefing] → [Official Product Reveal] → [Target Performance: 8K/120fps]"
-    },
-    {
-      "question": "What was the closing price of Bitcoin on the day the Ethereum ETF launched?",
-      "date": "2025-06-15",
-      "answer": "$85,432",
-      "causal_trace": "[ETH ETF Trading Launch (09:30 ET)] → [Market Volatility] → [Exchange Price Feeds] → [Daily Close (16:00 ET)] → [BTC Price: $85,432]"
-    },
-    {
-      "question": "Which artist's album broke the Spotify first-day streaming record in 2025?",
-      "date": "2025-05-03",
-      "answer": "Taylor Swift",
-      "causal_trace": "[Album Release (Midnight ET)] → [24-Hour Streaming Data] → [Spotify Internal Metrics] → [Record Validation] → [Artist: Taylor Swift (156M streams)]"
-    },
-    {
-      "question": "What was the throughput of Samsung's first 3nm GAA fabrication process?",
-      "date": "2025-10-30",
-      "answer": "90%",
-      "causal_trace": "[Production Yield Analysis] → [Process Node Maturation] → [Q3 2025 Investor Report] → [Earnings Call Disclosure] → [Yield Rate: 90%]"
-    },
-    {
-      "question": "How many people were evacuated due to the 2025 Rhine River flooding?",
-      "date": "2025-01-12",
-      "answer": "120,000",
-      "causal_trace": "[Flood Peak Forecasting] → [Regional Emergency Orders] → [Evacuation Coordination Center Logs] → [After-Action Report] → [Evacuees: 120,000]"
-    },
-    {
-      "question": "What was the maximum range achieved by QuantumScape's solid-state battery in a Porsche test?",
-      "date": "2026-02-28",
-      "answer": "810 km (503 miles)",
-      "causal_trace": "[WLTP Standardized Test Cycle] → [Independent Certification] → [Porsche Engineering Report] → [Joint Press Release] → [Range: 810 km]"
-    },
-    {
-      "question": "Which nation's moon rover first confirmed water ice at the lunar south pole?",
-      "date": "2025-08-08",
-      "answer": "India (ISRO)",
-      "causal_trace": "[Chandrayaan-4 Rover Deployment] → [Neutron Spectrometer Data] → [Sample Analysis] → [ISRO Scientific Publication] → [Discovery Attribution: India]"
-    },
-    {
-      "question": "What was the final order count for the Apple AR Glasses on launch day?",
-      "date": "2025-09-12",
-      "answer": "2.1 million",
-      "causal_trace": "[Pre-order System Tally] → [Order Management Database] → [Sales Figure Verification] → [Internal Memo] → [Launch Day Orders: 2.1M]"
-    },
-    {
-      "question": "How many countries signed the Global Plastics Treaty at the INC-7 meeting?",
-      "date": "2025-11-10",
-      "answer": "124",
-      "causal_trace": "[Negotiation Conclusion] → [Signing Ceremony] → [UNEP Secretariat Count] → [Treaty Status Update] → [Signatories: 124 nations]"
-    },
-    {
-      "question": "What was the casualty count in the 2026 Taiwan Strait incident?",
-      "date": "2026-03-08",
-      "answer": "0",
-      "causal_trace": "[Naval Incident De-escalation] → [Damage Assessment] → [Official Statements from Both Sides] → [International Verification] → [Confirmed Casualties: 0]"
-    },
-    {
-      "question": "Which company's quantum computer first achieved quantum advantage for drug discovery?",
-      "date": "2025-05-17",
-      "answer": "Google Quantum AI",
-      "causal_trace": "[Research Paper Publication] → [Algorithm Benchmarking] → [Peer Review] → [Nature Cover Story] → [Achieving Entity: Google]"
-    },
-    {
-      "question": "What was the final vote count for the 2025 UK General Election?",
-      "date": "2025-07-10",
-      "answer": "Labour: 412 seats, Conservatives: 198 seats",
-      "causal_trace": "[Constituency Results Declaration] → [Electoral Commission Certification] → [Final Seat Tally] → [Official Result] → [Seats: Lab 412, Con 198]"
-    }
+  {
+    "question": "What was the maximum safe duration for the first civilian spacewalk on a Polaris mission?",
+    "date": "2025-11-05",
+    "answer": "90 minutes",
+    "causal_trace": "[EVA Suit Performance Testing] → [Life Support System Limits] → [Mission Control Protocol] → [Polaris Mission Spec Sheet] → [Max EVA: 90 min]"
+  },
+  {
+    "question": "Which city was awarded the 2032 Summer Olympics?",
+    "date": "2025-07-21",
+    "answer": "Istanbul",
+    "causal_trace": "[IOC Evaluation Commission Report] → [Host City Election Session] → [Member Voting] → [Announcement Ceremony] → [Winner: Istanbul, Turkey]"
+  },
+  {
+    "question": "What was the final score of the first official NFL game held in Madrid?",
+    "date": "2025-10-05",
+    "answer": "Kansas City Chiefs 31 - Chicago Bears 17",
+    "causal_trace": "[Game Official Statistics] → [NFL Game Center Data] → [Play-by-Play Verification] → [Final Scoreboard] → [Result: KC 31 - CHI 17]"
+  },
+  {
+    "question": "How many frames per second did Sony's PlayStation 6 Pro target for 8K gaming?",
+    "date": "2026-03-23",
+    "answer": "120 fps",
+    "causal_trace": "[Hardware Specifications Finalization] → [Developer SDK Documentation] → [Tech Press Briefing] → [Official Product Reveal] → [Target Performance: 8K/120fps]"
+  },
+  {
+    "question": "What was the closing price of Bitcoin on the day the Ethereum ETF launched?",
+    "date": "2025-06-15",
+    "answer": "$85,432",
+    "causal_trace": "[ETH ETF Trading Launch (09:30 ET)] → [Market Volatility] → [Exchange Price Feeds] → [Daily Close (16:00 ET)] → [BTC Price: $85,432]"
+  },
+  {
+    "question": "Which artist's album broke the Spotify first-day streaming record in 2025?",
+    "date": "2025-05-03",
+    "answer": "Taylor Swift",
+    "causal_trace": "[Album Release (Midnight ET)] → [24-Hour Streaming Data] → [Spotify Internal Metrics] → [Record Validation] → [Artist: Taylor Swift (156M streams)]"
+  },
+  {
+    "question": "What was the throughput of Samsung's first 3nm GAA fabrication process?",
+    "date": "2025-10-30",
+    "answer": "90%",
+    "causal_trace": "[Production Yield Analysis] → [Process Node Maturation] → [Q3 2025 Investor Report] → [Earnings Call Disclosure] → [Yield Rate: 90%]"
+  },
+  {
+    "question": "How many people were evacuated due to the 2025 Rhine River flooding?",
+    "date": "2025-01-12",
+    "answer": "120,000",
+    "causal_trace": "[Flood Peak Forecasting] → [Regional Emergency Orders] → [Evacuation Coordination Center Logs] → [After-Action Report] → [Evacuees: 120,000]"
+  },
+  {
+    "question": "What was the maximum range achieved by QuantumScape's solid-state battery in a Porsche test?",
+    "date": "2026-02-28",
+    "answer": "810 km (503 miles)",
+    "causal_trace": "[WLTP Standardized Test Cycle] → [Independent Certification] → [Porsche Engineering Report] → [Joint Press Release] → [Range: 810 km]"
+  },
+  {
+    "question": "Which nation's moon rover first confirmed water ice at the lunar south pole?",
+    "date": "2025-08-08",
+    "answer": "India (ISRO)",
+    "causal_trace": "[Chandrayaan-4 Rover Deployment] → [Neutron Spectrometer Data] → [Sample Analysis] → [ISRO Scientific Publication] → [Discovery Attribution: India]"
+  },
+  {
+    "question": "What was the final order count for the Apple AR Glasses on launch day?",
+    "date": "2025-09-12",
+    "answer": "2.1 million",
+    "causal_trace": "[Pre-order System Tally] → [Order Management Database] → [Sales Figure Verification] → [Internal Memo] → [Launch Day Orders: 2.1M]"
+  },
+  {
+    "question": "How many countries signed the Global Plastics Treaty at the INC-7 meeting?",
+    "date": "2025-11-10",
+    "answer": "124",
+    "causal_trace": "[Negotiation Conclusion] → [Signing Ceremony] → [UNEP Secretariat Count] → [Treaty Status Update] → [Signatories: 124 nations]"
+  },
+  {
+    "question": "What was the casualty count in the 2026 Taiwan Strait incident?",
+    "date": "2026-03-08",
+    "answer": "0",
+    "causal_trace": "[Naval Incident De-escalation] → [Damage Assessment] → [Official Statements from Both Sides] → [International Verification] → [Confirmed Casualties: 0]"
+  },
+  {
+    "question": "Which company's quantum computer first achieved quantum advantage for drug discovery?",
+    "date": "2025-05-17",
+    "answer": "Google Quantum AI",
+    "causal_trace": "[Research Paper Publication] → [Algorithm Benchmarking] → [Peer Review] → [Nature Cover Story] → [Achieving Entity: Google]"
+  },
+  {
+    "question": "What was the final vote count for the 2025 UK General Election?",
+    "date": "2025-07-10",
+    "answer": "Labour: 412 seats, Conservatives: 198 seats",
+    "causal_trace": "[Constituency Results Declaration] → [Electoral Commission Certification] → [Final Seat Tally] → [Official Result] → [Seats: Lab 412, Con 198]"
+  }
 ]
-

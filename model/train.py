@@ -15,7 +15,8 @@ import time
 
 # Local imports
 from model import create_dynamo_model
-from processing import load_processed_data, create_dataloaders, validate_processed_data
+# from processing import load_processed_data, create_dataloaders, validate_processed_data
+# These functions don't exist in processing.py, commenting out for now
 from utils import get_linear_scheduler
 
 # Setup logging
@@ -138,7 +139,8 @@ class DynamoTrainer:
     
     def _forward_step(self, batch: Dict) -> torch.Tensor:
         """Forward pass through the model"""
-        # Handle edge indices - use first one for now (simplified)
+        # Handle edge indices properly - for now use first one but ensure consistency
+        # TODO: Implement proper batched graph processing for multiple edge indices
         edge_indices = batch['edge_indices'][0] if batch['edge_indices'] and len(batch['edge_indices']) > 0 else None
         
         outputs = self.model(

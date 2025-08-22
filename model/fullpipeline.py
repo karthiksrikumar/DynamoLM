@@ -29,73 +29,48 @@ import os
 import re
 import argparse
 import time
+import random
+import numpy as np
 from tqdm import tqdm
 from typing import Dict, List, Tuple, Optional, Any
 import logging
 import warnings
 warnings.filterwarnings("ignore")
 
+# Import reproducibility controls
+try:
+    from model.reproducibility import set_all_seeds, setup_deterministic_training, ReproducibleTrainer
+except ImportError:
+    try:
+        from reproducibility import set_all_seeds, setup_deterministic_training, ReproducibleTrainer
+    except ImportError:
+        print("Warning: Reproducibility module not found, using basic seed setting")
+        import random
+        import numpy as np
+        def set_all_seeds(seed):
+            random.seed(seed)
+            np.random.seed(seed)
+            torch.manual_seed(seed)
+        def setup_deterministic_training():
+            torch.backends.cudnn.deterministic = True
+        class ReproducibleTrainer:
+            pass
+
 # =============================================================================
-# 1. TOKENIZER UTILITIES
+# 1. IMPORTS AND UTILITIES
 # =============================================================================
 
-class DynamoTokenizer:
-    def __init__(self, model_name: str = "meta-llama/Llama-2-7b-hf"):
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        except:
-            print(f"⚠️  Failed to load {model_name}, using gpt2 fallback")
-            self.tokenizer = AutoTokenizer.from_pretrained("gpt2")
-            
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-    
-    def tokenize_qa_pair(self, question: str, answer: str = None, max_length: int = 512) -> Dict[str, torch.Tensor]:
-        if answer:
-            text = f"<s> Question: {question} Answer: {answer} </s>"
-        else:
-            text = f"<s> Question: {question} Answer:"
-        
-        encoding = self.tokenizer(
-            text, padding="max_length", truncation=True,
-            max_length=max_length, return_tensors="pt"
-        )
-        
-        if answer:
-            input_ids = encoding["input_ids"][0]
-            # Find where "Answer:" starts
-            try:
-                answer_token = self.tokenizer.encode("Answer:", add_special_tokens=False)[0]
-                answer_positions = torch.where(input_ids == answer_token)[0]
-                if len(answer_positions) > 0:
-                    answer_start_idx = answer_positions[0] + 1
-                    labels = input_ids.clone()
-                    labels[:answer_start_idx] = -100
-                else:
-                    labels = input_ids.clone()
-            except:
-                labels = input_ids.clone()
-            
-            return {
-                "input_ids": input_ids,
-                "attention_mask": encoding["attention_mask"][0],
-                "labels": labels
-            }
-        else:
-            return {
-                "input_ids": encoding["input_ids"][0],
-                "attention_mask": encoding["attention_mask"][0]
-            }
-    
-    def decode(self, token_ids: torch.Tensor) -> str:
-        return self.tokenizer.decode(token_ids, skip_special_tokens=True)
-    
-    def extract_answer(self, generated_text: str) -> str:
-        try:
-            answer_start = generated_text.find("Answer:") + len("Answer:")
-            return generated_text[answer_start:].strip()
-        except:
-            return generated_text.strip()
+# Import tokenizer from dedicated module
+try:
+    from model.tokenizer_utils import DynamoTokenizer
+except ImportError:
+    from tokenizer_utils import DynamoTokenizer
+
+# Import model from dedicated module
+try:
+    from model.model import DynamoModel
+except ImportError:
+    from model import DynamoModel
 
 # =============================================================================
 # 2. DATA PROCESSING
@@ -165,8 +140,8 @@ def collate_fn(batch):
         'edge_indices': edge_indices
     }
 
-def process_data(data_file: str, model_name: str, test_size: float = 0.2):
-    """Complete data processing pipeline"""
+def process_data(data_file: str, model_name: str, use_temporal_split: bool = True, test_size: float = 0.2):
+    """Complete data processing pipeline with proper temporal splitting"""
     print("📊 Processing data...")
     
     # Load raw data
@@ -181,331 +156,106 @@ def process_data(data_file: str, model_name: str, test_size: float = 0.2):
     node_list = extract_all_nodes(raw_data)
     print(f"   Found {len(node_list)} unique nodes")
     
-    # Process samples
-    processed_data = []
-    for item in tqdm(raw_data, desc="   Processing samples"):
+    if use_temporal_split:
+        # Create temporal splits to prevent data leakage
         try:
-            tokenized = tokenizer.tokenize_qa_pair(item["question"], item["answer"])
-            time_val = parse_date_to_time(item["date"])
-            edge_index = parse_causal_trace(item["causal_trace"], node_list)
-            
-            data_point = {
-                "input_ids": tokenized["input_ids"],
-                "attention_mask": tokenized["attention_mask"],
-                "labels": tokenized["labels"],
-                "time": torch.tensor([time_val], dtype=torch.float32),
-                "edge_index": edge_index,
-                "question": item["question"],
-                "answer": item["answer"]
-            }
-            processed_data.append(data_point)
-        except Exception as e:
-            print(f"   Failed to process item: {e}")
-            continue
-    
-    # Train-test split
-    train_data, test_data = train_test_split(
-        processed_data, test_size=test_size, random_state=42
-    )
-    
-    print(f"   Split: {len(train_data)} train, {len(test_data)} test")
-    
-    return train_data, test_data, node_list, tokenizer
-
-# =============================================================================
-# 3. MODEL ARCHITECTURE
-# =============================================================================
-
-class Time2Vec(nn.Module):
-    def __init__(self, dim: int, activation: str = "sin"):
-        super().__init__()
-        self.dim = dim
-        self.activation = activation
-        self.linear_weight = nn.Parameter(torch.randn(1))
-        self.linear_bias = nn.Parameter(torch.randn(1))
+            from model.temporal_data_splitter import create_batch_based_splits, validate_temporal_split
+        except ImportError:
+            from temporal_data_splitter import create_batch_based_splits, validate_temporal_split
         
-        if dim > 1:
-            self.periodic_weights = nn.Parameter(torch.randn(dim - 1))
-            self.periodic_biases = nn.Parameter(torch.randn(dim - 1))
+        print("   Using temporal splitting to prevent data leakage...")
+        raw_train, raw_val, raw_test = create_batch_based_splits(raw_data)
         
-        self.reset_parameters()
-    
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.linear_weight.unsqueeze(0))
-        nn.init.zeros_(self.linear_bias)
-        if hasattr(self, 'periodic_weights'):
-            nn.init.xavier_uniform_(self.periodic_weights.unsqueeze(0))
-            nn.init.uniform_(self.periodic_biases, -torch.pi, torch.pi)
-    
-    def forward(self, t: torch.Tensor) -> torch.Tensor:
-        if t.numel() == 0:
-            return torch.empty(*t.shape, self.dim, device=t.device, dtype=t.dtype)
-            
-        original_shape = t.shape
-        t_flat = t.flatten().unsqueeze(-1)
+        # Validate temporal consistency
+        if not validate_temporal_split(raw_train, raw_val, raw_test):
+            raise ValueError("Temporal split validation failed!")
         
-        linear_component = self.linear_weight * t_flat + self.linear_bias
+        # Process each split
+        train_data = []
+        val_data = []
+        test_data = []
         
-        if self.dim == 1:
-            result = linear_component
-        else:
-            periodic_input = self.periodic_weights * t_flat + self.periodic_biases
-            if self.activation == "sin":
-                periodic_component = torch.sin(periodic_input)
-            else:
-                periodic_component = torch.cos(periodic_input)
-            result = torch.cat([linear_component, periodic_component], dim=-1)
+        for split_data, processed_split, split_name in [
+            (raw_train, train_data, "training"),
+            (raw_val, val_data, "validation"), 
+            (raw_test, test_data, "test")
+        ]:
+            for item in tqdm(split_data, desc=f"   Processing {split_name} samples"):
+                try:
+                    tokenized = tokenizer.tokenize_qa_pair(item["question"], item["answer"])
+                    time_val = parse_date_to_time(item["date"])
+                    edge_index = parse_causal_trace(item["causal_trace"], node_list)
+                    
+                    data_point = {
+                        "input_ids": tokenized["input_ids"],
+                        "attention_mask": tokenized["attention_mask"],
+                        "labels": tokenized["labels"],
+                        "time": torch.tensor([time_val], dtype=torch.float32),
+                        "edge_index": edge_index,
+                        "question": item["question"],
+                        "answer": item["answer"],
+                        "date": item["date"],  # Keep original date for validation
+                        "timestamp": time_val  # Add timestamp for evaluation compatibility
+                    }
+                    processed_split.append(data_point)
+                except Exception as e:
+                    print(f"   Failed to process {split_name} item: {e}")
+                    continue
         
-        return result.view(*original_shape, self.dim)
-
-class DynamoModel(nn.Module):
-    def __init__(self, transformer_name: str, config: Dict):
-        super().__init__()
-        self.config = config
+        print(f"   Temporal split: {len(train_data)} train, {len(val_data)} val, {len(test_data)} test")
+        return train_data, val_data, test_data, node_list, tokenizer
         
-        # Load transformer
-        try:
-            self.transformer = LlamaForCausalLM.from_pretrained(
-                transformer_name, torch_dtype=torch.float32, device_map=None
-            )
-        except:
-            print(f"⚠️  Failed to load {transformer_name}, trying alternative...")
+    else:
+        # Fallback to random split (not recommended for temporal data)
+        print("   ⚠️  Using random split - may cause data leakage for temporal data!")
+        
+        processed_data = []
+        for item in tqdm(raw_data, desc="   Processing samples"):
             try:
-                from transformers import GPT2LMHeadModel
-                self.transformer = GPT2LMHeadModel.from_pretrained("gpt2")
-            except:
-                raise RuntimeError("Could not load any transformer model")
-        
-        self.hidden_dim = self.transformer.config.hidden_size
-        
-        # Time2Vec
-        self.use_time2vec = config.get('use_time2vec', True)
-        if self.use_time2vec:
-            self.time2vec_dim = config.get('time2vec_dim', 64)
-            self.time2vec = Time2Vec(self.time2vec_dim)
-        else:
-            self.time2vec_dim = 0
-        
-        # GNN
-        self.use_gnn = config.get('use_gnn', True)
-        if self.use_gnn:
-            self.node_dim = config.get('node_dim', 128)
-            self.gnn_output_dim = config.get('gnn_output_dim', 64)
-            self.node_embedding = None
-            self.gnn_conv1 = GCNConv(self.node_dim, self.gnn_output_dim)
-            self.gnn_conv2 = GCNConv(self.gnn_output_dim, self.gnn_output_dim)
-        else:
-            self.gnn_output_dim = 0
-        
-        # Fusion layer
-        fusion_input_dim = self.hidden_dim + self.time2vec_dim + self.gnn_output_dim
-        self.fusion_layer = nn.Sequential(
-            nn.Linear(fusion_input_dim, self.hidden_dim * 2),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(self.hidden_dim * 2, self.hidden_dim),
-            nn.Tanh()
-        )
-    
-    def _init_node_embeddings(self, num_nodes: int, device):
-        if self.use_gnn and (self.node_embedding is None or self.node_embedding.num_embeddings != num_nodes):
-            self.node_embedding = nn.Embedding(num_nodes, self.node_dim).to(device)
-            nn.init.xavier_uniform_(self.node_embedding.weight)
-    
-    def _process_graph(self, edge_indices: List[torch.Tensor], batch_size: int, device: torch.device):
-        if not self.use_gnn or not edge_indices:
-            return torch.zeros(batch_size, self.gnn_output_dim, device=device)
-        
-        # Use first edge index for simplicity
-        edge_index = edge_indices[0]
-        if edge_index.numel() == 0:
-            return torch.zeros(batch_size, self.gnn_output_dim, device=device)
-        
-        num_nodes = edge_index.max().item() + 1
-        self._init_node_embeddings(num_nodes, device)
-        
-        x = self.node_embedding.weight
-        x = F.relu(self.gnn_conv1(x, edge_index))
-        x = F.dropout(x, training=self.training)
-        x = self.gnn_conv2(x, edge_index)
-        
-        # Global pooling
-        graph_emb = x.mean(dim=0, keepdim=True)
-        return graph_emb.expand(batch_size, -1)
-    
-    def forward(self, input_ids, attention_mask, time=None, edge_indices=None, labels=None):
-        batch_size, seq_len = input_ids.shape
-        device = input_ids.device
-        
-        # Base embeddings
-        base_embeddings = self.transformer.get_input_embeddings()(input_ids)
-        
-        # Additional features
-        additional_features = []
-        
-        # Time features
-        if self.use_time2vec and time is not None:
-            time_emb = self.time2vec(time)
-            time_emb = time_emb.unsqueeze(1).expand(-1, seq_len, -1)
-            additional_features.append(time_emb)
-        
-        # Graph features
-        if self.use_gnn and edge_indices is not None:
-            graph_emb = self._process_graph(edge_indices, batch_size, device)
-            graph_emb = graph_emb.unsqueeze(1).expand(-1, seq_len, -1)
-            additional_features.append(graph_emb)
-        
-        # Fuse features
-        if additional_features:
-            combined_features = torch.cat([base_embeddings] + additional_features, dim=-1)
-            fused_embeddings = base_embeddings + self.fusion_layer(combined_features)
-        else:
-            fused_embeddings = base_embeddings
-        
-        # Pass through transformer
-        outputs = self.transformer(
-            inputs_embeds=fused_embeddings,
-            attention_mask=attention_mask,
-            labels=labels
-        )
-        
-        return outputs
-    
-    def generate(self, input_ids, attention_mask, time=None, edge_indices=None, **kwargs):
-        batch_size, seq_len = input_ids.shape
-        device = input_ids.device
-        
-        # Process features same as forward
-        base_embeddings = self.transformer.get_input_embeddings()(input_ids)
-        additional_features = []
-        
-        if self.use_time2vec and time is not None:
-            time_emb = self.time2vec(time)
-            time_emb = time_emb.unsqueeze(1).expand(-1, seq_len, -1)
-            additional_features.append(time_emb)
-        
-        if self.use_gnn and edge_indices is not None:
-            graph_emb = self._process_graph(edge_indices, batch_size, device)
-            graph_emb = graph_emb.unsqueeze(1).expand(-1, seq_len, -1)
-            additional_features.append(graph_emb)
-        
-        if additional_features:
-            combined_features = torch.cat([base_embeddings] + additional_features, dim=-1)
-            fused_embeddings = base_embeddings + self.fusion_layer(combined_features)
-        else:
-            fused_embeddings = base_embeddings
-        
-        return self.transformer.generate(
-            inputs_embeds=fused_embeddings,
-            attention_mask=attention_mask,
-            **kwargs
-        )
-
-# =============================================================================
-# 4. TRAINING LOGIC
-# =============================================================================
-
-def train_model(model, train_loader, test_loader, config):
-    """Complete training function"""
-    print("🚂 Training model...")
-    
-    device = config['device']
-    epochs = config['epochs']
-    learning_rate = config['learning_rate']
-    
-    model = model.to(device)
-    optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.01)
-    
-    total_steps = len(train_loader) * epochs
-    scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=100, num_training_steps=total_steps
-    )
-    
-    best_loss = float('inf')
-    train_losses = []
-    eval_losses = []
-    
-    for epoch in range(epochs):
-        print(f"\n📊 Epoch {epoch + 1}/{epochs}")
-        
-        # Training phase
-        model.train()
-        epoch_loss = 0
-        progress_bar = tqdm(train_loader, desc="   Training")
-        
-        for batch_idx, batch in enumerate(progress_bar):
-            # Move to device
-            for key in batch:
-                if key != 'edge_indices' and isinstance(batch[key], torch.Tensor):
-                    batch[key] = batch[key].to(device)
-                elif key == 'edge_indices':
-                    batch[key] = [ei.to(device) for ei in batch[key]]
-            
-            # Forward pass
-            outputs = model(
-                input_ids=batch['input_ids'],
-                attention_mask=batch['attention_mask'],
-                time=batch['time'],
-                edge_indices=batch['edge_indices'],
-                labels=batch['labels']
-            )
-            
-            loss = outputs.loss
-            
-            # Backward pass
-            optimizer.zero_grad()
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-            scheduler.step()
-            
-            epoch_loss += loss.item()
-            progress_bar.set_postfix({'loss': f'{loss.item():.4f}'})
-        
-        avg_train_loss = epoch_loss / len(train_loader)
-        train_losses.append(avg_train_loss)
-        
-        # Evaluation phase
-        model.eval()
-        eval_loss = 0
-        with torch.no_grad():
-            for batch in tqdm(test_loader, desc="   Evaluating"):
-                # Move to device
-                for key in batch:
-                    if key != 'edge_indices' and isinstance(batch[key], torch.Tensor):
-                        batch[key] = batch[key].to(device)
-                    elif key == 'edge_indices':
-                        batch[key] = [ei.to(device) for ei in batch[key]]
+                tokenized = tokenizer.tokenize_qa_pair(item["question"], item["answer"])
+                time_val = parse_date_to_time(item["date"])
+                edge_index = parse_causal_trace(item["causal_trace"], node_list)
                 
-                outputs = model(
-                    input_ids=batch['input_ids'],
-                    attention_mask=batch['attention_mask'],
-                    time=batch['time'],
-                    edge_indices=batch['edge_indices'],
-                    labels=batch['labels']
-                )
-                eval_loss += outputs.loss.item()
+                data_point = {
+                    "input_ids": tokenized["input_ids"],
+                    "attention_mask": tokenized["attention_mask"],
+                    "labels": tokenized["labels"],
+                    "time": torch.tensor([time_val], dtype=torch.float32),
+                    "edge_index": edge_index,
+                    "question": item["question"],
+                    "answer": item["answer"],
+                    "date": item["date"],
+                    "timestamp": time_val
+                }
+                processed_data.append(data_point)
+            except Exception as e:
+                print(f"   Failed to process item: {e}")
+                continue
         
-        avg_eval_loss = eval_loss / len(test_loader)
-        eval_losses.append(avg_eval_loss)
+        # Random train-test split
+        train_data, test_data = train_test_split(
+            processed_data, test_size=test_size, random_state=42
+        )
         
-        print(f"   Train Loss: {avg_train_loss:.4f}")
-        print(f"   Eval Loss:  {avg_eval_loss:.4f}")
+        # Create empty validation set for consistency
+        val_data = []
         
-        # Save best model
-        if avg_eval_loss < best_loss:
-            best_loss = avg_eval_loss
-            torch.save({
-                'model_state_dict': model.state_dict(),
-                'config': config,
-                'node_list': getattr(model, '_node_list', []),
-                'train_losses': train_losses,
-                'eval_losses': eval_losses,
-                'best_loss': best_loss
-            }, 'best_dynamo_model.pt')
-            print("   ✅ Best model saved!")
-    
-    return model, train_losses, eval_losses
+        print(f"   Random split: {len(train_data)} train, {len(test_data)} test")
+        return train_data, val_data, test_data, node_list, tokenizer
+
+# =============================================================================
+# 3. MODEL UTILITIES (using imported model)
+# =============================================================================
+
+# =============================================================================
+# 4. TRAINING LOGIC (using imported trainer)
+# =============================================================================
+
+# Import training utilities
+try:
+    from model.train import DynamoTrainer
+except ImportError:
+    from train import DynamoTrainer
 
 # =============================================================================
 # 5. INFERENCE
@@ -580,6 +330,10 @@ def main():
     
     args = parser.parse_args()
     
+    # Setup reproducibility FIRST
+    set_all_seeds(42)
+    setup_deterministic_training()
+    
     # Quick test adjustments
     if args.quick_test:
         args.epochs = 1
@@ -597,6 +351,7 @@ def main():
     print(f"   Device: {device}")
     print(f"   Data: {args.data}")
     print(f"   Transformer: {args.transformer}")
+    print(f"   Reproducibility: Enabled (seed=42)")
     
     # Check data file
     if not os.path.exists(args.data):
@@ -606,26 +361,71 @@ def main():
     start_time = time.time()
     
     try:
-        # Step 1: Process data
-        train_data, test_data, node_list, tokenizer = process_data(
-            args.data, args.transformer
+        # Step 1: Process data with temporal splitting
+        train_data, val_data, test_data, node_list, tokenizer = process_data(
+            args.data, args.transformer, use_temporal_split=True
         )
         
         # Step 2: Create datasets and loaders
         train_dataset = DynamoDataset(train_data)
+        val_dataset = DynamoDataset(val_data) if val_data else None
         test_dataset = DynamoDataset(test_data)
+        
+        # Create reproducible data loaders
+        def worker_init_fn(worker_id):
+            np.random.seed(42 + worker_id)
+            random.seed(42 + worker_id)
         
         train_loader = DataLoader(
             train_dataset, batch_size=args.batch_size, 
-            shuffle=True, collate_fn=collate_fn
+            shuffle=True, collate_fn=collate_fn,
+            num_workers=0,  # Disable multiprocessing for reproducibility
+            worker_init_fn=worker_init_fn,
+            generator=torch.Generator().manual_seed(42)
         )
+        
+        # Use validation set if available, otherwise create a small validation split from training
+        if val_dataset:
+            eval_loader = DataLoader(
+                val_dataset, batch_size=args.batch_size, 
+                shuffle=False, collate_fn=collate_fn,
+                num_workers=0, worker_init_fn=worker_init_fn
+            )
+            print("   Using validation set for training evaluation")
+        else:
+            # Create a small validation split from training data to avoid test set leakage
+            val_size = max(1, len(train_data) // 10)  # 10% of training data
+            train_subset = train_data[:-val_size]
+            val_subset = train_data[-val_size:]
+            
+            train_dataset = DynamoDataset(train_subset)
+            val_dataset = DynamoDataset(val_subset)
+            
+            # Update train_loader with reduced training data
+            train_loader = DataLoader(
+                train_dataset, batch_size=args.batch_size, 
+                shuffle=True, collate_fn=collate_fn,
+                num_workers=0, worker_init_fn=worker_init_fn,
+                generator=torch.Generator().manual_seed(42)
+            )
+            
+            eval_loader = DataLoader(
+                val_dataset, batch_size=args.batch_size, 
+                shuffle=False, collate_fn=collate_fn,
+                num_workers=0, worker_init_fn=worker_init_fn
+            )
+            print(f"   Created validation split from training data: {len(train_subset)} train, {len(val_subset)} val")
+            print("   ✅ Test set protected from training leakage")
+        
         test_loader = DataLoader(
             test_dataset, batch_size=args.batch_size, 
-            shuffle=False, collate_fn=collate_fn
+            shuffle=False, collate_fn=collate_fn,
+            num_workers=0, worker_init_fn=worker_init_fn
         )
         
         # Step 3: Create model
         config = {
+            'transformer': args.transformer,  # Add missing transformer config
             'use_time2vec': True,
             'use_gnn': True,
             'time2vec_dim': 64,
@@ -638,7 +438,7 @@ def main():
         }
         
         print("🏗️  Creating model...")
-        model = DynamoModel(args.transformer, config)
+        model = DynamoModel(config)
         model._node_list = node_list  # Store for saving
         
         total_params = sum(p.numel() for p in model.parameters())
@@ -646,8 +446,16 @@ def main():
         print(f"   Total parameters: {total_params:,}")
         print(f"   Trainable parameters: {trainable_params:,}")
         
-        # Step 4: Train model
-        model, train_losses, eval_losses = train_model(model, train_loader, test_loader, config)
+        # Step 4: Train model using proper trainer
+        print("🚂 Initializing trainer...")
+        trainer = DynamoTrainer(model, train_loader, eval_loader, node_list, config)
+        
+        print("🚂 Starting training...")
+        training_stats = trainer.train()
+        
+        # Extract losses for compatibility
+        train_losses = training_stats['train_losses']
+        eval_losses = training_stats['eval_losses']
         
         # Step 5: Test inference
         test_inference(model, tokenizer, node_list, test_data, device)
